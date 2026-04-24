@@ -1,0 +1,13 @@
+domain: pushudc.top
+VPS: 159.223.125.78
+Password: 32511416Ju
+
+--- iZooto Site App IDs (NOT the REST API keys) ---
+universodoscartoes.com → 7e5215e708249e3809bf73652dbe30e89cd1003c
+site2 (domain TBC)    → ceffff0552e1c3f29ec441ba8e5eabdb94e3f215
+site3 (domain TBC)    → a87276f92f95cd5b7951ffe6a284bd57b1de128c
+
+--- iZooto REST API Keys (pending — Julio must click "Request" in dashboard) ---
+universodoscartoes.com → (pending)
+site2                  → (pending)
+site3                  → (pending)

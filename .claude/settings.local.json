@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s ifconfig.me)",
+      "Bash(npm -v)",
+      "Bash(pm2 -v)",
+      "Bash(nginx -v)",
+      "Bash(certbot --version)",
+      "Read(//var/**)",
+      "Read(//home/**)",
+      "Bash(apt-get update *)",
+      "Bash(apt-get upgrade *)",
+      "Bash(curl -fsSL https://deb.nodesource.com/setup_20.x)",
+      "Bash(bash -)",
+      "Bash(apt-get install *)",
+      "Bash(npm install *)",
+      "Bash(mkdir -p /var/www/push-automation)",
+      "Bash(npm init *)",
+      "Bash(ln -sf /etc/nginx/sites-available/pushudc /etc/nginx/sites-enabled/pushudc)",
+      "Bash(nginx -t)",
+      "Bash(systemctl reload *)",
+      "Bash(certbot --nginx -d pushudc.top -d www.pushudc.top --non-interactive --agree-tos -m monkeydev956@gmail.com)",
+      "Bash(node test-izooto.js)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -H \"auth-key: 7e5215e708249e3809bf73652dbe30e89cd1003c\" \"https://api.izooto.com/v2/campaigns\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -H \"Authorization: Bearer 7e5215e708249e3809bf73652dbe30e89cd1003c\" \"https://api.izooto.com/v2/campaigns\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -H \"auth-key: 7e5215e708249e3809bf73652dbe30e89cd1003c\" \"https://api.izooto.com/v1/campaigns\")",
+      "Bash(curl -sv \"https://api.izooto.com/\")",
+      "Bash(curl -s \"https://api.izooto.com/v2/push/send\" -H \"auth-key: 7e5215e708249e3809bf73652dbe30e89cd1003c\")",
+      "Bash(curl -s \"https://api.izooto.com/v2/segments\" -H \"auth-key: 7e5215e708249e3809bf73652dbe30e89cd1003c\")",
+      "WebSearch",
+      "WebFetch(domain:help.izooto.com)",
+      "Bash(curl -s -X GET https://apis.izooto.com/v1/audience -H 'Authorization: Bearer 7e5215e708249e3809bf73652dbe30e89cd1003c' -H 'Content-Type: application/json')",
+      "Bash(curl -s -X GET https://apis.izooto.com/v1/audience -H 'Authorization: Token 7e5215e708249e3809bf73652dbe30e89cd1003c' -H 'Content-Type: application/json')",
+      "Bash(curl -s -X GET https://apis.izooto.com/v1/audience -H 'Authorization-token: 7e5215e708249e3809bf73652dbe30e89cd1003c' -H 'Content-Type: application/json')",
+      "Bash(curl -sv -X GET https://apis.izooto.com/v1/audience -H 'Authentication-Token: 7e5215e708249e3809bf73652dbe30e89cd1003c' -H 'Content-Type: application/json')"
+    ]
+  }
+}

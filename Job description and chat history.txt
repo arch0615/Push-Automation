@@ -1,0 +1,182 @@
+this is job description.
+Description:
+Estou procurando um(a) desenvolvedor(a) com experiência em automação para criar um sistema de notificações push inteligente para meus sites em WordPress.
+
+O objetivo é ter um sistema 100% automatizado, que envie notificações com base no conteúdo do site e regras estratégicas — podendo ser integrado à plataforma que uso atualmente (iZooto) ou desenvolvido do zero (preferencial).
+
+🔧 O que preciso:
+Sistema de envio automático de push notifications
+Integração com WordPress (posts, categorias, tags, etc.)
+Uso de ia para gerar títulos e textos de push com alto ctr
+definição de regras inteligentes, como:
+enviar push ao publicar novo conteúdo
+reaproveitar conteúdos antigos automaticamente
+criar variações de texto (a/b test)
+segmentação de usuários (se possível)
+agendamento automático (horários estratégicos)
+painel simples para controle e ajustes
+💡 diferenciais importantes:
+experiência com automação (n8n, make, apis, etc.)
+Experiência com notificações push (especialmente iZooto)
+Conhecimento em WordPress (hooks, API, plugins)
+Noção de copywriting para alto CTR
+Experiência com IA (OpenAI ou similares)
+⚙️ Possibilidades:
+Automatizar dentro do iZooto
+ou
+Criar um sistema próprio (mais robusto e escalável)
+🎯 Objetivo final:
+
+Ter um sistema que funcione praticamente sozinho, gerando e enviando notificações push com inteligência, focado em aumentar tráfego e engajamento.
+----------
+this is my proposal.
+Olá, Julio,
+
+Tendo recebido avaliações 5 estrelas e retornos positivos de todos os meus clientes anteriores, faço questão de entender a fundo o objetivo de cada cliente, não apenas a lista de tarefas, mas o problema real por trás do projeto.
+
+O que você busca não é apenas automatizar envios, e sim construir uma máquina de tráfego recorrente onde o site trabalha por você o tempo todo, reaproveitando conteúdo antigo de forma inteligente, testando variações de títulos com IA para encontrar o texto com maior CTR e disparando nos horários certos, enquanto você foca em produzir conteúdo novo em vez de cuidar de pushes manualmente.
+
+Tenho experiência sólida em automação de notificações push integradas a sites WordPress, uso da API do iZooto e alternativas como OneSignal e Pushwoosh, construção de sistemas próprios de push quando a escala justifica, automação com n8n e Make conectadas a WordPress via REST API, geração de copys otimizadas para CTR usando Claude e GPT, testes A/B automáticos e painéis simples de controle para ajustar regras sem precisar de programador.
+
+Minha abordagem começa com uma fase curta de descoberta para entender o volume atual de tráfego, as categorias de conteúdo, o histórico de posts disponível para reaproveitamento, as métricas atuais do iZooto e quais regras estratégicas fazem mais sentido para o seu nicho. Em seguida avanço em sprints, começando pela integração direta com o WordPress via REST API e hooks (para captar publicação de novos posts), seguindo pela camada de IA que gera títulos e textos de push otimizados para CTR (com prompts ajustados ao estilo do seu site), depois pela lógica de reaproveitamento automático de conteúdos antigos baseada em regras (posts com bom desempenho, evergreen, sazonais), em seguida pelo sistema de testes A/B automáticos para cada push, depois pelo agendamento em horários estratégicos baseados em comportamento dos usuários e, por fim, pelo painel simples para você controlar regras, ver métricas e aprovar envios quando quiser. Mantenho comunicação próxima com você e entrego tudo documentado.
+
+Recomendo dois caminhos possíveis, conforme o seu perfil e volume. Se o iZooto já atende bem e o objetivo é deixar tudo mais automatizado rápido, uso WordPress mais n8n mais Claude API mais a API do iZooto para construir o motor de automação sobre a base atual, com custo baixo e entrega ágil. Se o objetivo é escalar com autonomia real e reduzir o custo por envio no longo prazo, construo um sistema próprio usando OneSignal ou um serviço de push custom (Node.js com Web Push API), com banco PostgreSQL para histórico, testes A/B dedicados e painel em Next.js. Essa segunda opção é mais robusta e normalmente paga o investimento em poucos meses em sites de alto volume.
+
+Um envolvimento de longo prazo para evoluir o sistema com base em métricas reais, refinar os prompts de IA para maximizar CTR e adicionar novas regras estratégicas conforme os resultados aparecem, parece um caminho natural, caso haja uma boa sintonia.
+
+Para eu entender melhor o escopo, tenho duas perguntas rápidas:
+- Qual o volume atual de inscritos no iZooto (ou na plataforma que usa) e quantos envios por dia você costuma disparar hoje, para eu avaliar se faz mais sentido continuar no iZooto ou migrar para um sistema próprio?
+- Quantos sites WordPress deverão ser integrados nessa primeira fase e existe um nicho principal de conteúdo (notícias, finanças, entretenimento, afiliados) para eu calibrar os prompts da IA no estilo certo desde o início?
+
+Fico no aguardo do seu retorno.
+
+James
+-------
+this is our chat history.
+Julio: Deixa eu detalhar melhor o que eu preciso pra gente alinhar bem:
+
+Eu quero um sistema focado em automação de push como canal de tráfego, não atrelado diretamente a novos posts do WordPress.
+
+🔥 O que eu quero na prática:
+Disparo de pushes todos os dias de forma automática
+Esses pushes devem levar para URLs específicas que eu selecionar manualmente (não precisa ser post novo)
+Sistema que funcione tipo “campanhas contínuas”, não só baseado em publicação
+🤖 Automação com IA (parte mais importante):
+
+Quero que o sistema faça:
+
+Gerar títulos e descrições automaticamente com IA (foco em CTR)
+Criar múltiplas variações (A/B test automático)
+Gerar ou sugerir imagens com IA para usar nos pushes
+Possibilidade de:
+Pegar ícones de redes sociais (WhatsApp, Facebook, etc.)
+Ou elementos visuais chamativos automaticamente
+Tudo com objetivo de aumentar CTR
+⚙️ Lógica que imagino:
+Eu cadastro várias URLs (ex: minhas LPs)
+O sistema:
+Gera pushes novos todos os dias
+Varia copy + imagem automaticamente
+Distribui os envios ao longo do dia
+Testa o que performa melhor e ajusta
+🎯 Objetivo final:
+
+Ter uma máquina de push rodando sozinha, gerando tráfego diariamente com:
+
+Copy otimizada
+Visual chamativo
+Testes contínuos
+
+James: Olá, obrigado pela sua resposta.
+
+9 hours ago 
+Você cadastra seus URLs (landing pages, ofertas, conteúdo antigo que ainda converte) e o sistema cuida do resto. Diariamente, ele cria novos envios com títulos e descrições atualizados, escritos por IA para alta taxa de cliques (CTR), seleciona ou gera imagens atraentes, cria 2 ou 3 variações para cada URL e distribui os envios ao longo do dia para encontrar os melhores horários para o seu público. Após cada envio, o sistema analisa qual texto e qual imagem receberam mais cliques e usa esses dados para aprimorar a próxima rodada
+
+9 hours ago 
+Para as imagens, posso conectar o sistema a ferramentas de IA que geram elementos visuais a partir do texto, além de usar uma pequena biblioteca de elementos prontos, como ícones de redes sociais (WhatsApp, Facebook), setas, círculos vermelhos, emojis e outros recursos que comprovadamente aumentam os cliques. Você pode aprovar as imagens antes do envio ou deixar que o sistema envie tudo automaticamente; a escolha é sua
+
+9 hours ago 
+Na parte técnica, eu usaria o n8n ou um pequeno backend personalizado em Node.js para executar a automação, Claude ou GPT para o texto, uma IA de imagem para os visuais e a API do iZooto (ou OneSignal, se você quiser mais controle e menor custo) para o envio. Também criarei um painel simples onde você poderá adicionar URLs, definir limites diários, visualizar a CTR por campanha e pausar as campanhas quando desejar
+Julio: image.png
+9 hours ago
+esse é o tipo de push que vamos usar
+James: 
+Esse é o estilo de "notificação falsa" - notificações push que se parecem com mensagens reais do WhatsApp, Gmail, Facebook, Roblox e assim por diante
+
+9 hours ago 
+Estou muito familiarizado com esse estilo. É um dos formatos com as maiores taxas de cliques (CTR), principalmente nos setores de jogos, finanças e mídias sociais (como mostrado na captura de tela)
+
+9 hours ago 
+Criaremos uma biblioteca de modelos por categoria (mensagem de voz do WhatsApp, novo e-mail do Gmail, nova mensagem do Facebook, recompensa do Roblox, aprovação bancária, recebimento de um presente etc.) e armazenaremos ícones correspondentes a cada modelo no sistema. Para cada URL inserida, a IA seleciona o modelo mais adequado para aquela oferta, escreve o texto em um estilo curto e personalizado (incluindo emojis, números e elementos de curiosidade) e gera duas ou três versões para teste
+
+9 hours ago 
+A IA também aprende com os resultados ao longo do tempo. Se o modelo de "mensagem de voz do WhatsApp" tiver uma CTR maior em uma URL específica, ela usará esse estilo com mais frequência para aquela oferta. Se a opção "Receba 5 novos e-mails do Gmail" for mais eficaz em um URL diferente, ela será alterada automaticamente. Dessa forma, sua taxa de cliques (CTR) aumentará gradualmente a cada semana, sem nenhum esforço adicional
+
+9 hours ago 
+Um pequeno espaço também será adicionado ao painel para que você possa fazer upload de novos estilos ou ideias de ícones, caso os considere eficazes no mercado. A IA começará então a utilizar os ícones ou ideias enviados
+
+9 hours ago 
+Você já possui uma lista dos estilos de modelo mais eficazes para seus nichos de mercado? Ou prefere começar com um pacote pronto contendo de 15 a 20 modelos que abrangem diversos setores, como WhatsApp, Gmail, Facebook, Instagram, bancos, jogos e presentes, e expandir sua biblioteca com base nos resultados?
+Julio: Sim james
+
+9 hours ago
+teremos uma dashboard? o sistema teria qual custo mensal? ele suporta ate quantos usuarios?
+vamos fazer do 0, ou utilizar o izooto?
+James: Um painel de controle sempre faz parte do sistema.
+Dentro do painel de controle, você poderá adicionar e remover URLs, ver quantas notificações push cada uma enviou hoje, verificar a CTR de cada variação, pausar campanhas, carregar novos modelos e ícones, definir o limite diário por URL e ver um relatório geral da semana e do mês
+
+9 hours ago 
+Se você tem um número pequeno de assinantes e deseja resultados rápidos, recomendamos começar adicionando recursos de automação ao iZooto. No entanto, se você planeja aumentar o número de assinantes e expandir seu projeto, acredito que construir tudo do zero seja a melhor opção
+
+9 hours ago 
+Se o seu objetivo é manter tudo simples e automatizado, eu prefiro usar o iZooto; caso contrário, prefiro desenvolver do zero.
+
+Você pode escolher qualquer um dos dois métodos, dependendo da sua preferência.
+Julio: prefiro criar do 0, quanto tempo fica pronto?
+
+James: O desenvolvimento leva cerca de 3 semanas no total, incluindo os testes.
+
+A Fase 1, o desenvolvimento do MVP (Produto Mínimo Viável), leva cerca de 2 semanas.
+
+Nesta fase, todas as funcionalidades principais do sistema são implementadas.
+
+Isso inclui assinaturas de notificações push que funcionam no site, registro de URLs no painel de controle, geração de conteúdo com inteligência artificial usando um pacote inicial com 15 a 20 modelos (WhatsApp, Gmail, Facebook, Roblox, Bancos, Presentes, Mensagens Diretas em Redes Sociais), envio automático diário, recursos básicos de agendamento e um painel de controle intuitivo que exibe as principais métricas (CTR por URL, CTR por modelo, total de envios diários).
+
+A Fase 2 do desenvolvimento leva mais 1 semana.
+
+Isso inclui IA de imagem que gera visuais personalizados para cada notificação push, um mecanismo completo de teste A/B (onde o sistema gera várias variações, envia pequenas amostras primeiro e, em seguida, amplia a versão mais eficaz), um sistema de aprendizado que memoriza o melhor modelo, frase e momento para cada URL, relatórios semanais e mensais e um pequeno espaço para fazer upload de novos ícones e modelos quando novos estilos eficazes forem descobertos no mercado
+Julio: Eu so achei um pouco caro para manter por mes, 50 dolares, será conseguimos um pouco mais barato? o que tem que é tao caro?
+ou seria 50 reais?
+moeda local
+podemos fazer o MVP no izooto, e depois de validar fazer do 0? vc sabe se o IZOOTO, permite que facamos automacoes?
+James: Primeiro, deixe-me explicar como reduzir custos.
+
+1. Processamento de Imagens com IA.
+
+Este projeto não requer imagens complexas de IA.
+Essas notificações push são essencialmente ícones de aplicativos (WhatsApp, Gmail, Facebook, Roblox, etc.) com um pequeno fundo e texto adicionados. Usando bibliotecas de imagens gratuitas para Node.js (como Sharp ou Canvas), você pode criar essas imagens combinando ícones e texto de IA que foram carregados uma única vez. Isso permite o processamento sem custos adicionais.
+
+2. Notificações Push.
+
+Consideramos o OneSignal para maior segurança, mas agora podemos usar a API Web Push diretamente, e ela é 100% gratuita, independentemente do número de assinantes
+
+Julio: Eu atualmente uso o IZOOto, o que voce recomenda fazer?
+James: Utilizar o IZOOto facilita o desenvolvimento. No entanto, considerando o desejo do cliente de reduzir os custos de manutenção e a escala crescente do projeto, prefiro desenvolvê-lo do zero
+Julio: E custaria 50 dolares por mes?
+James: Não. Custa cerca de 30 dólares por mês
+Julio: Ok james, poderia fazer uma dashboard interativa em portugues também?
+James: Você só precisa pagar pelo VPS e pela chave da API de IA.
+Sim claro.
+Julio: Eu nao me lembro se te perguntei, mas eu poderia adicionar varios sites no painel, certo?
+Eu queria que criasse um MVP para o izooto, após validarmos, poderiamos fazer um do 0
+james: Este painel suporta múltiplos sites desde o início, o que é uma das principais funcionalidades do sistema
+Julio: Eu queria que criasse um MVP para o izooto, após validarmos, poderiamos fazer um do 0, o que acha? voce nao entende, portugues certo?
+James: Farei como você desejar.
+Primeiro, vou construir o iZooto como um MVP (Produto Viável Mínimo)
+Julio: voce ja fez projetos para outros brasileiros?
+James: Por favor, verifique meu histórico profissional.
+Trabalhei com clientes brasileiros, e eles deixaram uma ótima avaliação com nota máxima de 5 estrelas
+Julio: ok, vamos fazer esse projeto
+James: Como você sabe, posso começar a trabalhar assim que o processo de garantia for concluído
+Julio: o sistema consegue enviar nos melhores horarios tambem os pushs, todos os dias, certo? tem algum limite de push por dia?
+James: O sistema envia notificações push automaticamente todos os dias nos horários ideais, sem limite para a quantidade de notificações enviadas na plataforma
