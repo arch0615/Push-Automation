@@ -107,8 +107,9 @@ async function loadInicio() {
   const activeUrls = urls.filter(u => u.status === 'ativa').length;
   const t = summary.totals || {};
 
+  const totalSubs = sites.reduce((s, x) => s + (x.subscribers || 0), 0);
   document.getElementById('summaryCards').innerHTML = [
-    statCard({ label: 'Sites conectados', value: sites.length, icon: icons.sites, gradient: 'from-violet-500 to-fuchsia-500' }),
+    statCard({ label: 'Inscritos totais', value: totalSubs.toLocaleString('pt-BR'), icon: '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>', gradient: 'from-violet-500 to-fuchsia-500', sub: `${sites.length} sites` }),
     statCard({ label: 'URLs ativas', value: activeUrls, icon: icons.active, gradient: 'from-emerald-500 to-teal-500', sub: `de ${urls.length}` }),
     statCard({ label: 'Pushes no período', value: t.sent || 0, icon: icons.send, gradient: 'from-orange-500 to-amber-500' }),
     statCard({ label: 'CTR médio', value: pct(t.ctr || 0), icon: icons.chart, gradient: 'from-blue-500 to-cyan-500' }),
@@ -119,11 +120,9 @@ async function loadInicio() {
     <div class="flex items-center justify-between p-3 rounded-xl bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700 transition">
       <div class="min-w-0 flex-1">
         <div class="font-medium text-zinc-900 dark:text-white text-sm truncate">${s.domain}</div>
-        <div class="text-[11px] text-zinc-500 dark:text-zinc-500 mt-0.5 font-mono">${s.app_id.slice(0, 16)}…</div>
-      </div>
-      <div class="ml-3 flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-semibold ${s.has_api_key ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'}">
-        ${s.has_api_key ? icons.check : icons.warn}
-        ${s.has_api_key ? 'Conectado' : 'Pendente'}
+        <div class="text-[11px] text-zinc-500 dark:text-zinc-500 mt-0.5 flex items-center gap-2">
+          <span class="font-semibold text-violet-600 dark:text-violet-400">${(s.subscribers || 0).toLocaleString('pt-BR')} inscritos</span>
+        </div>
       </div>
     </div>
   `).join('') || `<div class="text-center py-6 text-sm text-zinc-400 dark:text-zinc-500">Nenhum site conectado</div>`;
@@ -473,6 +472,21 @@ async function loadSettings() {
   document.getElementById('publicBaseUrl').value = settings.public_base_url || '';
   document.getElementById('autoApprove').checked = settings.auto_approve === 'true';
 
+  const origin = window.location.origin;
+  document.getElementById('embedSnippets').innerHTML = sites.map(s => {
+    const snippet = `<script src="${origin}/embed.js" data-site="${s.name}" async></` + `script>`;
+    const safe = snippet.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `
+      <div class="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-800/30">
+        <div class="flex items-center justify-between mb-2">
+          <div class="font-semibold text-zinc-900 dark:text-white text-sm">${s.domain}</div>
+          <button onclick="copySnippet('snip_${s.id}')" class="text-xs px-2.5 py-1 rounded-md bg-zinc-900 dark:bg-white dark:text-zinc-900 text-white hover:bg-zinc-700 dark:hover:bg-zinc-200 transition">Copiar</button>
+        </div>
+        <pre id="snip_${s.id}" class="text-[11px] font-mono bg-zinc-950 text-emerald-300 p-3 rounded-lg overflow-x-auto">${safe}</pre>
+      </div>
+    `;
+  }).join('');
+
   document.getElementById('apiKeysList').innerHTML = sites.map(s => `
     <div class="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-800/30">
       <div class="flex items-center justify-between mb-3">
@@ -549,6 +563,12 @@ document.getElementById('modal').addEventListener('click', (e) => {
   if (e.target.id === 'modal') closeModal();
 });
 
+function copySnippet(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent).then(() => toast('Código copiado'));
+}
+
 window.toggleUrl = toggleUrl;
 window.deleteUrl = deleteUrl;
 window.sendUrl = sendUrl;
@@ -557,5 +577,6 @@ window.saveApiKey = saveApiKey;
 window.closeModal = closeModal;
 window.showInsights = showInsights;
 window.closeInsights = closeInsights;
+window.copySnippet = copySnippet;
 
 checkAuth().then(() => navigate('inicio'));

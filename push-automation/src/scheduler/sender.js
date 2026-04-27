@@ -1,6 +1,7 @@
 const db = require('../db/database');
 const settings = require('../api/settings');
-const { sendCampaign } = require('../izooto/client');
+const izooto = require('../izooto/client');
+const webpush = require('../webpush/client');
 const { generateVariations } = require('../ai/generate');
 const { composeForCopy } = require('../images/composer');
 
@@ -71,34 +72,65 @@ async function sendOneForUrl(url) {
   const site = db.prepare('SELECT * FROM sites WHERE id = ?').get(url.site_id);
   if (!site) return { skipped: 'site_not_found' };
 
-  const baseUrl = settings.get('public_base_url', 'http://pushudc.top');
+  const baseUrl = settings.get('public_base_url', 'https://pushudc.top');
   const iconUrl = copy.image_filename
     ? `${baseUrl}/images/generated/${copy.image_filename}`
     : null;
 
-  const result = await sendCampaign(site.api_key, {
-    name: `${site.name}-${url.id}-v${copy.variation}-${Date.now()}`,
-    title: copy.title,
-    message: copy.description,
-    iconUrl,
-    landingUrl: url.url,
-  });
+  const provider = settings.get('delivery_provider', 'webpush');
+  const campaignInsert = db.prepare(`
+    INSERT INTO campaigns (copy_id, izooto_campaign_id, sent_at, impressions)
+    VALUES (?, ?, CURRENT_TIMESTAMP, ?)
+  `);
 
-  db.prepare(`
-    INSERT INTO campaigns (copy_id, izooto_campaign_id, sent_at)
-    VALUES (?, ?, CURRENT_TIMESTAMP)
-  `).run(copy.id, result.izooto_campaign_id);
-
-  db.prepare(`UPDATE copies SET status = 'sent' WHERE id = ?`).run(copy.id);
-
-  return {
-    sent: true,
-    copy_id: copy.id,
-    title: copy.title,
-    template: copy.template,
-    izooto_campaign_id: result.izooto_campaign_id,
-    mock: result.mock || false,
-  };
+  let result, impressions = 0;
+  if (provider === 'webpush') {
+    const subCount = webpush.getSubscriberCount(site.id);
+    const trackingUrl = `${baseUrl}/api/push/click/__CAMPAIGN_ID__?url=${encodeURIComponent(url.url)}`;
+    const insertRow = campaignInsert.run(copy.id, null, subCount);
+    const campaignId = insertRow.lastInsertRowid;
+    result = await webpush.sendCampaign(site.id, {
+      title: copy.title,
+      body: copy.description,
+      icon: iconUrl,
+      url: trackingUrl.replace('__CAMPAIGN_ID__', campaignId),
+      campaignId,
+    });
+    impressions = result.sent || 0;
+    db.prepare('UPDATE campaigns SET izooto_campaign_id = ?, impressions = ? WHERE id = ?')
+      .run(result.izooto_campaign_id, impressions, campaignId);
+    db.prepare(`UPDATE copies SET status = 'sent' WHERE id = ?`).run(copy.id);
+    return {
+      sent: true,
+      copy_id: copy.id,
+      title: copy.title,
+      template: copy.template,
+      provider: 'webpush',
+      subscribers: subCount,
+      delivered: result.sent,
+      failed: result.failed,
+      mock: result.mock || false,
+    };
+  } else {
+    result = await izooto.sendCampaign(site.api_key, {
+      name: `${site.name}-${url.id}-v${copy.variation}-${Date.now()}`,
+      title: copy.title,
+      message: copy.description,
+      iconUrl,
+      landingUrl: url.url,
+    });
+    campaignInsert.run(copy.id, result.izooto_campaign_id, 0);
+    db.prepare(`UPDATE copies SET status = 'sent' WHERE id = ?`).run(copy.id);
+    return {
+      sent: true,
+      copy_id: copy.id,
+      title: copy.title,
+      template: copy.template,
+      provider: 'izooto',
+      izooto_campaign_id: result.izooto_campaign_id,
+      mock: result.mock || false,
+    };
+  }
 }
 
 async function runCycle() {

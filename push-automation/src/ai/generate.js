@@ -6,7 +6,7 @@ const client = process.env.AI_API_KEY
   ? new Anthropic({ apiKey: process.env.AI_API_KEY })
   : null;
 
-const MODEL = 'claude-sonnet-4-5';
+const MODEL = 'claude-haiku-4-5';
 const MAX_TITLE = 50;
 const MAX_DESCRIPTION = 90;
 

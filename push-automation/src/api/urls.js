@@ -6,7 +6,12 @@ const { composeForCopy } = require('../images/composer');
 const router = express.Router();
 
 router.get('/sites', (req, res) => {
-  const sites = db.prepare('SELECT id, name, domain, app_id, CASE WHEN api_key IS NULL THEN 0 ELSE 1 END AS has_api_key FROM sites').all();
+  const sites = db.prepare(`
+    SELECT s.id, s.name, s.domain, s.app_id,
+           CASE WHEN s.api_key IS NULL THEN 0 ELSE 1 END AS has_api_key,
+           (SELECT COUNT(*) FROM subscribers WHERE site_id = s.id AND active = 1) AS subscribers
+    FROM sites s
+  `).all();
   res.json(sites);
 });
 

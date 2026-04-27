@@ -10,6 +10,7 @@ const imagesRouter = require('./src/api/images');
 const settingsRouter = require('./src/api/settings');
 const campaignsRouter = require('./src/api/campaigns');
 const reportsRouter = require('./src/api/reports');
+const pushRouter = require('./src/api/push');
 const scheduler = require('./src/scheduler/cron');
 
 const { requireAuth } = authRouter;
@@ -28,6 +29,7 @@ app.use('/api/urls', requireAuth, urlsRouter);
 app.use('/api/settings', requireAuth, settingsRouter);
 app.use('/api/campaigns', requireAuth, campaignsRouter);
 app.use('/api/reports', requireAuth, reportsRouter);
+app.use('/api/push', pushRouter);
 app.use('/images', imagesRouter);
 
 const schedulerInfo = scheduler.start();

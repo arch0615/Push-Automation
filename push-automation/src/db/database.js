@@ -56,16 +56,44 @@ db.exec(`
     value TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS subscribers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    user_agent TEXT,
+    country TEXT,
+    active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS clicks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign_id INTEGER NOT NULL,
+    subscriber_id INTEGER,
+    ip TEXT,
+    user_agent TEXT,
+    clicked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_urls_site ON urls(site_id);
   CREATE INDEX IF NOT EXISTS idx_copies_url ON copies(url_id);
   CREATE INDEX IF NOT EXISTS idx_campaigns_copy ON campaigns(copy_id);
+  CREATE INDEX IF NOT EXISTS idx_subscribers_site ON subscribers(site_id);
+  CREATE INDEX IF NOT EXISTS idx_subscribers_active ON subscribers(active);
+  CREATE INDEX IF NOT EXISTS idx_clicks_campaign ON clicks(campaign_id);
 `);
 
 const defaultSettings = {
   send_times: '08:00,12:00,18:00',
   timezone: 'America/Sao_Paulo',
-  public_base_url: 'http://pushudc.top',
+  public_base_url: 'https://pushudc.top',
   auto_approve: 'true',
+  delivery_provider: 'webpush',
 };
 const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
 for (const [k, v] of Object.entries(defaultSettings)) insertSetting.run(k, v);
