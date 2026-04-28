@@ -38,11 +38,21 @@ async function compose({ iconFile, title }) {
   return { filename: outName, path: outPath };
 }
 
+function pickIconForTemplate(template) {
+  const candidates = template.icons || (template.icon ? [template.icon] : []);
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(ICONS_DIR, candidate))) return candidate;
+  }
+  return candidates[0] || null;
+}
+
 async function composeForCopy(copy) {
   const template = getTemplate(copy.template);
   if (!template) throw new Error(`Unknown template: ${copy.template}`);
+  const iconFile = pickIconForTemplate(template);
+  if (!iconFile) throw new Error(`No icon defined for template: ${copy.template}`);
   return compose({
-    iconFile: template.icon,
+    iconFile,
     title: copy.title,
   });
 }

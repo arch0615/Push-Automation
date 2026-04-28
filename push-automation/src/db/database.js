@@ -12,6 +12,9 @@ db.exec(`
     domain TEXT NOT NULL,
     app_id TEXT NOT NULL,
     api_key TEXT,
+    daily_target INTEGER NOT NULL DEFAULT 0,
+    active_window_start TEXT NOT NULL DEFAULT '08:00',
+    active_window_end TEXT NOT NULL DEFAULT '22:00',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -21,6 +24,7 @@ db.exec(`
     url TEXT NOT NULL,
     label TEXT NOT NULL,
     niche TEXT NOT NULL,
+    language TEXT NOT NULL DEFAULT 'pt-BR',
     status TEXT NOT NULL DEFAULT 'ativa',
     daily_limit INTEGER DEFAULT 3,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -72,12 +76,43 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS clicks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    campaign_id INTEGER NOT NULL,
+    campaign_id INTEGER,
     subscriber_id INTEGER,
+    site_id INTEGER,
     ip TEXT,
     user_agent TEXT,
-    clicked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
+    clicked_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS welcome_steps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL,
+    step_order INTEGER NOT NULL,
+    delay_minutes INTEGER NOT NULL,
+    template TEXT NOT NULL,
+    label TEXT NOT NULL,
+    landing_url TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS welcome_sent (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    subscriber_id INTEGER NOT NULL,
+    step_id INTEGER NOT NULL,
+    sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(subscriber_id, step_id),
+    FOREIGN KEY (subscriber_id) REFERENCES subscribers(id) ON DELETE CASCADE,
+    FOREIGN KEY (step_id) REFERENCES welcome_steps(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS welcome_clicks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    step_id INTEGER,
+    ip TEXT,
+    user_agent TEXT,
+    clicked_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
   CREATE INDEX IF NOT EXISTS idx_urls_site ON urls(site_id);
@@ -86,6 +121,10 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_subscribers_site ON subscribers(site_id);
   CREATE INDEX IF NOT EXISTS idx_subscribers_active ON subscribers(active);
   CREATE INDEX IF NOT EXISTS idx_clicks_campaign ON clicks(campaign_id);
+  CREATE INDEX IF NOT EXISTS idx_welcome_steps_site ON welcome_steps(site_id);
+  CREATE INDEX IF NOT EXISTS idx_welcome_sent_sub ON welcome_sent(subscriber_id);
+  CREATE INDEX IF NOT EXISTS idx_welcome_sent_step ON welcome_sent(step_id);
+  CREATE INDEX IF NOT EXISTS idx_welcome_clicks_step ON welcome_clicks(step_id);
 `);
 
 const defaultSettings = {
@@ -94,6 +133,10 @@ const defaultSettings = {
   public_base_url: 'https://pushudc.top',
   auto_approve: 'true',
   delivery_provider: 'webpush',
+  daily_target: '0',
+  active_window_start: '08:00',
+  active_window_end: '22:00',
+  tracking_params: 'utm_source=push&utm_medium=notification',
 };
 const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
 for (const [k, v] of Object.entries(defaultSettings)) insertSetting.run(k, v);

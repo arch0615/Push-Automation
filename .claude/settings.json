@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(curl -sk -o /tmp/img.png -w 'HTTP %{http_code} | size=%{size_download} | type=%{content_type}\\\\n' https://pushudc.top/images/generated/push_13647d13877f.png)",
+      "Bash(curl -skI https://pushudc.top/images/generated/push_13647d13877f.png)",
+      "Bash(curl -skI https://pushudc.top/images/icons/robux.png)",
+      "Bash(curl -sk -b /tmp/wstats.txt https://pushudc.top/api/urls/sites)",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -sk https://pushudc.top/sw.js)",
+      "Bash(curl -sk -b /tmp/sn.txt -X POST https://pushudc.top/api/campaigns/send-now)",
+      "Bash(curl -sk -o /dev/null -w '  POST /track-click/0 → HTTP %{http_code}\\\\n' -X POST https://pushudc.top/api/push/track-click/0)",
+      "Bash(curl -sk -o /dev/null -w '  POST /track-click/99999 → HTTP %{http_code}\\\\n' -X POST https://pushudc.top/api/push/track-click/99999)",
+      "Bash(curl -sk -o /dev/null -w \"  POST /track-click/0 → HTTP %{http_code}\\\\n\" -X POST https://pushudc.top/api/push/track-click/0)",
+      "Bash(curl -sk -o /dev/null -w \"  POST /track-click/99999 → HTTP %{http_code}\\\\n\" -X POST https://pushudc.top/api/push/track-click/99999)",
+      "Bash(curl -sk -o /dev/null -w \"  POST /track-welcome-click/0 → HTTP %{http_code}\\\\n\" -X POST https://pushudc.top/api/push/track-welcome-click/0)",
+      "Bash(curl -sk https://pushudc.top/embed.js)"
+    ]
+  }
+}

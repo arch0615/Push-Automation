@@ -201,24 +201,45 @@ async function loadUrls() {
     api.get('/api/urls'),
   ]);
   window._sites = sites;
+  window._allUrls = urls;
 
-  document.getElementById('urlsTable').innerHTML = urls.map(u => {
+  const filterEl = document.getElementById('siteFilters');
+  const activeFilter = window._urlFilter || 'all';
+  filterEl.innerHTML = `
+    <span class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mr-2">Filtrar por site:</span>
+    <button onclick="setUrlFilter('all')" class="px-3 py-1.5 rounded-lg text-xs font-medium transition ${activeFilter === 'all' ? 'bg-violet-600 text-white' : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'}">Todos (${urls.length})</button>
+    ${sites.map(s => {
+      const count = urls.filter(u => u.site_id === s.id).length;
+      const sel = activeFilter === s.id;
+      return `<button onclick="setUrlFilter(${s.id})" class="px-3 py-1.5 rounded-lg text-xs font-medium transition ${sel ? 'bg-violet-600 text-white' : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'}">${s.domain} (${count})</button>`;
+    }).join('')}
+  `;
+
+  const visible = activeFilter === 'all' ? urls : urls.filter(u => u.site_id === activeFilter);
+
+  document.getElementById('urlsTable').innerHTML = visible.map(u => {
     const isActive = u.status === 'ativa';
+    const siteSubs = sites.find(s => s.id === u.site_id)?.subscribers || 0;
     return `
     <tr class="border-t border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40">
       <td class="px-6 py-4">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5">
           <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 dark:from-violet-500/20 dark:to-fuchsia-500/20 border border-violet-200/50 dark:border-violet-500/30 flex items-center justify-center text-violet-600 dark:text-violet-400 font-bold text-sm">
             ${u.site_domain.slice(0, 1).toUpperCase()}
           </div>
           <div class="min-w-0">
-            <div class="font-semibold text-zinc-900 dark:text-white truncate">${u.label}</div>
-            <div class="text-xs text-zinc-500 dark:text-zinc-500 truncate max-w-sm font-mono">${u.url}</div>
+            <div class="font-semibold text-zinc-900 dark:text-white text-sm truncate max-w-[180px]">${u.site_domain}</div>
+            <div class="text-[11px] text-violet-600 dark:text-violet-400 font-medium">${siteSubs.toLocaleString('pt-BR')} inscritos</div>
           </div>
         </div>
       </td>
       <td class="px-6 py-4">
+        <div class="font-medium text-zinc-900 dark:text-white text-sm truncate max-w-[280px]">${u.label}</div>
+        <div class="text-xs text-zinc-500 dark:text-zinc-500 truncate max-w-[280px] font-mono">${u.url}</div>
+      </td>
+      <td class="px-6 py-4">
         <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium">${u.niche}</span>
+        <span class="ml-1 text-xs">${u.language === 'en' ? '🇺🇸' : '🇧🇷'}</span>
       </td>
       <td class="px-6 py-4 text-zinc-600 dark:text-zinc-400 text-sm font-medium">${u.daily_limit}/dia</td>
       <td class="px-6 py-4">
@@ -231,6 +252,9 @@ async function loadUrls() {
         <div class="inline-flex items-center gap-1">
           <button onclick="showInsights(${u.id}, '${u.label.replace(/'/g, "\\'")}')" class="p-2 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-500/10 text-violet-600 dark:text-violet-400 transition" title="Insights">${icons.insights}</button>
           <button onclick="sendUrl(${u.id})" class="p-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition" title="Disparar agora">${icons.play}</button>
+          <button onclick="editUrl(${u.id})" class="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 transition" title="Editar">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          </button>
           <button onclick="toggleUrl(${u.id}, '${u.status}')" class="p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition" title="${isActive ? 'Pausar' : 'Retomar'}">${icons.pause}</button>
           <button onclick="deleteUrl(${u.id})" class="p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 transition" title="Remover">${icons.trash}</button>
         </div>
@@ -238,16 +262,21 @@ async function loadUrls() {
     </tr>
   `}).join('') || `
     <tr>
-      <td colspan="5" class="px-6 py-16">
+      <td colspan="6" class="px-6 py-16">
         <div class="text-center">
           <div class="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 mx-auto mb-3 flex items-center justify-center text-zinc-400">
             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
           </div>
-          <div class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Nenhuma URL cadastrada</div>
+          <div class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Nenhuma URL ${activeFilter === 'all' ? 'cadastrada' : 'para esse site'}</div>
           <div class="text-xs text-zinc-500 dark:text-zinc-500 mt-1">Clique em "Nova URL" para começar</div>
         </div>
       </td>
     </tr>`;
+}
+
+function setUrlFilter(filter) {
+  window._urlFilter = filter;
+  loadUrls();
 }
 
 function openNewUrlModal() {
@@ -272,7 +301,7 @@ function openNewUrlModal() {
         <label class="${labelCls}">Rótulo</label>
         <input name="label" type="text" required class="${inputCls}" placeholder="Ex: Oferta Black Friday"/>
       </div>
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-3 gap-3">
         <div>
           <label class="${labelCls}">Nicho</label>
           <select name="niche" required class="${inputCls}">
@@ -287,8 +316,15 @@ function openNewUrlModal() {
           </select>
         </div>
         <div>
+          <label class="${labelCls}">Idioma</label>
+          <select name="language" required class="${inputCls}">
+            <option value="pt-BR">Português 🇧🇷</option>
+            <option value="en">English 🇺🇸</option>
+          </select>
+        </div>
+        <div>
           <label class="${labelCls}">Limite/dia</label>
-          <input name="daily_limit" type="number" min="1" max="20" value="3" class="${inputCls}"/>
+          <input name="daily_limit" type="number" min="1" max="999" value="3" class="${inputCls}"/>
         </div>
       </div>
       <div class="flex gap-2 pt-3">
@@ -315,6 +351,57 @@ async function toggleUrl(id, current) {
   await api.patch(`/api/urls/${id}`, { status });
   toast(status === 'ativa' ? 'Retomada' : 'Pausada');
   loadUrls();
+}
+
+function editUrl(id) {
+  const urls = window._allUrls || [];
+  const u = urls.find(x => x.id === id);
+  if (!u) return;
+  const inputCls = 'w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+  const labelCls = 'block text-xs font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wide mb-1.5';
+  showModal(`
+    <h3 class="text-xl font-bold text-zinc-900 dark:text-white mb-1">Editar URL</h3>
+    <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-5">${u.site_domain}</p>
+    <form id="editUrlForm" class="space-y-4">
+      <div>
+        <label class="${labelCls}">Rótulo</label>
+        <input name="label" required value="${u.label.replace(/"/g, '&quot;')}" class="${inputCls}"/>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="${labelCls}">Nicho</label>
+          <select name="niche" required class="${inputCls}">
+            ${['finanças','jogos','redes sociais','entretenimento','e-commerce','ofertas','relacionamentos','geral'].map(n => `<option value="${n}" ${n === u.niche ? 'selected' : ''}>${n}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="${labelCls}">Idioma</label>
+          <select name="language" required class="${inputCls}">
+            <option value="pt-BR" ${u.language === 'pt-BR' ? 'selected' : ''}>Português 🇧🇷</option>
+            <option value="en" ${u.language === 'en' ? 'selected' : ''}>English 🇺🇸</option>
+          </select>
+        </div>
+        <div>
+          <label class="${labelCls}">Limite/dia</label>
+          <input name="daily_limit" type="number" min="1" max="999" value="${u.daily_limit}" class="${inputCls}"/>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-3">
+        <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2.5 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 transition">Cancelar</button>
+        <button type="submit" class="flex-1 bg-gradient-to-br from-blue-500 to-violet-500 hover:shadow-lg hover:shadow-blue-500/30 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition">Salvar</button>
+      </div>
+    </form>
+  `);
+  document.getElementById('editUrlForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    data.daily_limit = parseInt(data.daily_limit, 10);
+    const r = await api.patch(`/api/urls/${id}`, data);
+    if (r.error) return toast(r.error);
+    closeModal();
+    toast('URL atualizada');
+    loadUrls();
+  });
 }
 
 async function deleteUrl(id) {
@@ -388,43 +475,74 @@ async function sendUrl(id) {
 }
 
 async function loadCampaigns() {
-  const campaigns = await api.get('/api/campaigns');
-  document.getElementById('campaignsTable').innerHTML = campaigns.map(c => `
+  const [campaigns, sites] = await Promise.all([
+    api.get('/api/campaigns'),
+    api.get('/api/urls/sites'),
+  ]);
+  window._allCampaigns = campaigns;
+
+  const activeFilter = window._campaignFilter || 'all';
+  const filterEl = document.getElementById('campaignFilters');
+  filterEl.innerHTML = `
+    <span class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mr-2">Filtrar por site:</span>
+    <button onclick="setCampaignFilter('all')" class="px-3 py-1.5 rounded-lg text-xs font-medium transition ${activeFilter === 'all' ? 'bg-violet-600 text-white' : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'}">Todos (${campaigns.length})</button>
+    ${sites.map(s => {
+      const count = campaigns.filter(c => c.site_id === s.id).length;
+      const sel = activeFilter === s.id;
+      return `<button onclick="setCampaignFilter(${s.id})" class="px-3 py-1.5 rounded-lg text-xs font-medium transition ${sel ? 'bg-violet-600 text-white' : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'}">${s.domain} (${count})</button>`;
+    }).join('')}
+  `;
+
+  const visible = activeFilter === 'all' ? campaigns : campaigns.filter(c => c.site_id === activeFilter);
+
+  document.getElementById('campaignsTable').innerHTML = visible.map(c => `
     <tr class="border-t border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50/60 dark:hover:bg-zinc-800/40">
       <td class="px-6 py-4 text-zinc-600 dark:text-zinc-400 text-xs whitespace-nowrap font-medium">${fmtDate(c.sent_at)}</td>
       <td class="px-6 py-4">
-        <div class="font-semibold text-zinc-900 dark:text-white text-sm truncate max-w-md">${c.title}</div>
-        <div class="text-xs text-zinc-500 dark:text-zinc-500 mt-0.5">${c.label} · ${c.site_domain}</div>
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 dark:from-violet-500/20 dark:to-fuchsia-500/20 border border-violet-200/50 dark:border-violet-500/30 flex items-center justify-center text-violet-600 dark:text-violet-400 font-bold text-xs">${c.site_domain.slice(0, 1).toUpperCase()}</div>
+          <div class="text-xs text-zinc-700 dark:text-zinc-300 truncate max-w-[140px]">${c.site_domain}</div>
+        </div>
+      </td>
+      <td class="px-6 py-4">
+        <div class="font-semibold text-zinc-900 dark:text-white text-sm truncate max-w-[280px]">${c.title}</div>
+        <div class="text-xs text-zinc-500 dark:text-zinc-500 mt-0.5 truncate max-w-[280px]">${c.label}</div>
       </td>
       <td class="px-6 py-4">
         <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 text-xs font-medium">${c.template}</span>
       </td>
       <td class="px-6 py-4 text-zinc-600 dark:text-zinc-400 text-xs font-mono">v${c.variation}</td>
+      <td class="px-6 py-4 text-right text-zinc-700 dark:text-zinc-300 text-sm font-mono">${(c.impressions || 0).toLocaleString('pt-BR')}</td>
+      <td class="px-6 py-4 text-right text-zinc-700 dark:text-zinc-300 text-sm font-mono">${(c.clicks || 0).toLocaleString('pt-BR')}</td>
       <td class="px-6 py-4 text-right">
         <span class="text-sm font-bold ${(c.ctr || 0) > 5 ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-700 dark:text-zinc-300'} font-mono">${pct(c.ctr)}</span>
       </td>
     </tr>
   `).join('') || `
     <tr>
-      <td colspan="5" class="px-6 py-16">
+      <td colspan="8" class="px-6 py-16">
         <div class="text-center">
           <div class="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 mx-auto mb-3 flex items-center justify-center text-zinc-400">
             ${icons.send}
           </div>
-          <div class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Nenhuma campanha enviada</div>
+          <div class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Nenhuma campanha ${activeFilter === 'all' ? 'enviada' : 'desse site'}</div>
           <div class="text-xs text-zinc-500 dark:text-zinc-500 mt-1">Use "Disparar agora" para começar</div>
         </div>
       </td>
     </tr>`;
 }
 
+function setCampaignFilter(filter) {
+  window._campaignFilter = filter;
+  loadCampaigns();
+}
+
 async function sendNow() {
   if (!confirm('Disparar campanhas para todas as URLs ativas agora?')) return;
   const r = await api.post('/api/campaigns/send-now');
   if (r.error) return toast(r.error);
-  const sent = r.results.filter(x => x.sent).length;
-  toast(`${sent} push(es) disparado(s)`);
-  loadCampaigns();
+  toast(`${r.queued_urls || 0} URLs em disparo. Atualizando…`);
+  setTimeout(() => loadCampaigns(), 8000);
 }
 
 async function loadIcons() {
@@ -462,30 +580,93 @@ document.getElementById('iconUpload').addEventListener('change', async (e) => {
   loadIcons();
 });
 
+const TEMPLATE_KEYS = [
+  'whatsapp_voice','whatsapp_message','gmail_inbox','facebook_message','facebook_alert',
+  'roblox_reward','gift_received','bank_approval','instagram_dm','telegram_message',
+  'tiktok_notification','youtube_notification','gift_delivery','shopping_deal',
+  'crypto_alert','secret_reveal'
+];
+
 async function loadSettings() {
   const [settings, sites] = await Promise.all([
     api.get('/api/settings'),
     api.get('/api/urls/sites'),
   ]);
+  window._sites = sites;
   document.getElementById('sendTimes').value = settings.send_times || '';
   document.getElementById('timezone').value = settings.timezone || '';
   document.getElementById('publicBaseUrl').value = settings.public_base_url || '';
   document.getElementById('autoApprove').checked = settings.auto_approve === 'true';
+  document.getElementById('trackingParams').value = settings.tracking_params || '';
+
+  document.getElementById('perSiteFrequency').innerHTML = sites.map(s => {
+    const target = s.daily_target ?? 0;
+    const start = s.active_window_start || '08:00';
+    const end = s.active_window_end || '22:00';
+    return `
+      <div class="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+        <div class="w-7 h-7 rounded-md bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 dark:from-violet-500/20 dark:to-fuchsia-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400 font-bold text-xs flex-shrink-0">${s.domain.slice(0, 1).toUpperCase()}</div>
+        <div class="flex-1 min-w-0 text-sm font-medium text-zinc-900 dark:text-white truncate">${s.domain}</div>
+        <div class="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">Meta:</div>
+        <input id="freq_target_${s.id}" type="number" min="0" max="9999" value="${target}" class="w-20 px-2 py-1.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500"/>
+        <input id="freq_start_${s.id}" type="text" value="${start}" placeholder="08:00" class="w-20 px-2 py-1.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500 text-center"/>
+        <span class="text-zinc-400 dark:text-zinc-500 text-xs">→</span>
+        <input id="freq_end_${s.id}" type="text" value="${end}" placeholder="22:00" class="w-20 px-2 py-1.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500 text-center"/>
+        <button onclick="saveSiteFrequency(${s.id})" class="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-md text-xs font-medium transition">Salvar</button>
+      </div>
+    `;
+  }).join('');
 
   const origin = window.location.origin;
-  document.getElementById('embedSnippets').innerHTML = sites.map(s => {
+  const sitesContainer = document.getElementById('embedSnippets');
+
+  const header = `
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-sm text-zinc-600 dark:text-zinc-400">${sites.length} ${sites.length === 1 ? 'site cadastrado' : 'sites cadastrados'}</div>
+      <button onclick="openNewSiteModal()" class="btn-primary text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        Novo site
+      </button>
+    </div>
+  `;
+
+  const cards = sites.map(s => {
     const snippet = `<script src="${origin}/embed.js" data-site="${s.name}" async></` + `script>`;
     const safe = snippet.replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return `
       <div class="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-800/30">
-        <div class="flex items-center justify-between mb-2">
-          <div class="font-semibold text-zinc-900 dark:text-white text-sm">${s.domain}</div>
-          <button onclick="copySnippet('snip_${s.id}')" class="text-xs px-2.5 py-1 rounded-md bg-zinc-900 dark:bg-white dark:text-zinc-900 text-white hover:bg-zinc-700 dark:hover:bg-zinc-200 transition">Copiar</button>
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2 min-w-0">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 dark:from-violet-500/20 dark:to-fuchsia-500/20 border border-violet-200/50 dark:border-violet-500/30 flex items-center justify-center text-violet-600 dark:text-violet-400 font-bold text-xs">${s.domain.slice(0, 1).toUpperCase()}</div>
+            <div class="min-w-0">
+              <div class="font-semibold text-zinc-900 dark:text-white text-sm truncate">${s.domain}</div>
+              <div class="text-[11px] text-zinc-500 dark:text-zinc-500">${(s.subscribers || 0).toLocaleString('pt-BR')} inscritos</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1">
+            <button onclick="copySnippet('snip_${s.id}')" class="text-xs px-2.5 py-1 rounded-md bg-zinc-900 dark:bg-white dark:text-zinc-900 text-white hover:bg-zinc-700 dark:hover:bg-zinc-200 transition">Copiar código</button>
+            <a href="/sw.js" download="sw.js" class="text-xs px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white transition">Baixar sw.js</a>
+            <button onclick="editSite(${s.id})" class="p-1.5 rounded-md hover:bg-violet-50 dark:hover:bg-violet-500/10 text-violet-600 dark:text-violet-400 transition" title="Renomear site">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            </button>
+            <button onclick="deleteSite(${s.id}, '${s.domain.replace(/'/g, "\\'")}')" class="p-1.5 rounded-md hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 transition" title="Remover site">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
         </div>
         <pre id="snip_${s.id}" class="text-[11px] font-mono bg-zinc-950 text-emerald-300 p-3 rounded-lg overflow-x-auto">${safe}</pre>
+        <div class="mt-2 text-[11px] text-zinc-500 dark:text-zinc-500 leading-relaxed">
+          <span class="font-semibold">Instruções:</span>
+          1) Cole o código acima antes do <code class="font-mono bg-zinc-100 dark:bg-zinc-800 px-1 rounded">&lt;/body&gt;</code> do seu site.
+          2) Baixe o arquivo <code class="font-mono bg-zinc-100 dark:bg-zinc-800 px-1 rounded">sw.js</code> e envie para a raiz do site (mesma pasta da página inicial).
+        </div>
       </div>
     `;
   }).join('');
+
+  sitesContainer.innerHTML = header + cards;
+
+  await renderWelcomeFlows(sites);
 
   document.getElementById('apiKeysList').innerHTML = sites.map(s => `
     <div class="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/40 dark:bg-zinc-800/30">
@@ -526,11 +707,23 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
     timezone: document.getElementById('timezone').value,
     public_base_url: document.getElementById('publicBaseUrl').value,
     auto_approve: document.getElementById('autoApprove').checked ? 'true' : 'false',
+    tracking_params: document.getElementById('trackingParams').value || '',
   };
   const r = await api.patch('/api/settings', body);
   if (r.error) return toast(r.error);
   toast('Configurações salvas');
 });
+
+async function saveSiteFrequency(siteId) {
+  const body = {
+    daily_target: parseInt(document.getElementById(`freq_target_${siteId}`).value, 10) || 0,
+    active_window_start: document.getElementById(`freq_start_${siteId}`).value || '08:00',
+    active_window_end: document.getElementById(`freq_end_${siteId}`).value || '22:00',
+  };
+  const r = await api.patch(`/api/urls/sites/${siteId}`, body);
+  if (r.error) return toast(r.error);
+  toast(`Frequência salva (meta: ${body.daily_target}/dia)`);
+}
 
 function applyThemeUI() {
   const isDark = document.documentElement.classList.contains('dark');
@@ -563,13 +756,233 @@ document.getElementById('modal').addEventListener('click', (e) => {
   if (e.target.id === 'modal') closeModal();
 });
 
+async function renderWelcomeFlows(sites) {
+  const stepsBySite = {};
+  await Promise.all(sites.map(async s => {
+    stepsBySite[s.id] = await api.get(`/api/welcome/${s.id}/steps`);
+  }));
+
+  document.getElementById('welcomeFlows').innerHTML = sites.map(s => {
+    const steps = stepsBySite[s.id] || [];
+    const enabledCount = steps.filter(x => x.enabled).length;
+    return `
+      <details class="border border-zinc-200/80 dark:border-zinc-800 rounded-xl overflow-hidden bg-zinc-50/40 dark:bg-zinc-800/30" ${steps.length > 0 ? '' : ''}>
+        <summary class="cursor-pointer px-4 py-3 flex items-center justify-between hover:bg-zinc-100/40 dark:hover:bg-zinc-700/30 transition">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-500/10 to-fuchsia-500/10 dark:from-rose-500/20 dark:to-fuchsia-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 font-bold text-xs">${s.domain.slice(0, 1).toUpperCase()}</div>
+            <div>
+              <div class="font-semibold text-zinc-900 dark:text-white text-sm">${s.domain}</div>
+              <div class="text-[11px] text-zinc-500 dark:text-zinc-500">${steps.length} passos · ${enabledCount} ativos</div>
+            </div>
+          </div>
+          <button onclick="event.preventDefault(); event.stopPropagation(); openNewWelcomeStepModal(${s.id})" class="text-xs px-2.5 py-1 rounded-md bg-rose-600 hover:bg-rose-700 text-white transition flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            Novo passo
+          </button>
+        </summary>
+        <div class="px-4 pb-4 pt-2 space-y-2">
+          ${steps.length === 0 ? '<div class="text-xs text-zinc-400 dark:text-zinc-500 italic py-2">Nenhum passo configurado. Clique em "Novo passo" para começar.</div>' : steps.map(step => {
+            const sent = step.sent || 0;
+            const clicks = step.clicks || 0;
+            const ctr = sent > 0 ? (clicks / sent) * 100 : 0;
+            const lastSent = step.last_sent ? fmtDate(step.last_sent) : '—';
+            return `
+            <div class="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold text-xs flex-shrink-0">${step.step_order}</div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium text-zinc-900 dark:text-white truncate">${step.label}</div>
+                  <div class="text-[11px] text-zinc-500 dark:text-zinc-500 mt-0.5">
+                    ⏱ ${step.delay_minutes} min após anterior · 🎨 ${step.template} · 🔗 ${step.landing_url.slice(0, 40)}${step.landing_url.length > 40 ? '…' : ''}
+                  </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" ${step.enabled ? 'checked' : ''} onchange="toggleWelcomeStep(${step.id}, this.checked)" class="sr-only peer"/>
+                  <div class="w-9 h-5 bg-zinc-300 dark:bg-zinc-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-600"></div>
+                </label>
+                <button onclick="deleteWelcomeStep(${step.id})" class="p-1.5 rounded-md hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 transition" title="Remover">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
+              <div class="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-500">Envios</div>
+                  <div class="text-sm font-bold text-zinc-900 dark:text-white font-mono">${sent.toLocaleString('pt-BR')}</div>
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-500">Cliques</div>
+                  <div class="text-sm font-bold text-zinc-900 dark:text-white font-mono">${clicks.toLocaleString('pt-BR')}</div>
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-500">CTR</div>
+                  <div class="text-sm font-bold ${ctr > 5 ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-700 dark:text-zinc-300'} font-mono">${ctr.toFixed(1)}%</div>
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-500">Último envio</div>
+                  <div class="text-xs text-zinc-700 dark:text-zinc-300">${lastSent}</div>
+                </div>
+              </div>
+            </div>
+          `;}).join('')}
+        </div>
+      </details>
+    `;
+  }).join('');
+}
+
+function openNewWelcomeStepModal(siteId) {
+  const inputCls = 'w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent';
+  const labelCls = 'block text-xs font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wide mb-1.5';
+  showModal(`
+    <h3 class="text-xl font-bold text-zinc-900 dark:text-white mb-1">Novo passo de boas-vindas</h3>
+    <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-5">Quando um novo inscrito chegar, esse push será enviado após o tempo definido</p>
+    <form id="newWelcomeStepForm" class="space-y-4">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="${labelCls}">Atraso (min após anterior)</label>
+          <input name="delay_minutes" type="number" min="1" max="10080" value="5" class="${inputCls}"/>
+        </div>
+        <div>
+          <label class="${labelCls}">Modelo</label>
+          <select name="template" required class="${inputCls}">
+            ${TEMPLATE_KEYS.map(k => `<option value="${k}">${k}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="${labelCls}">Rótulo (contexto pra IA)</label>
+        <input name="label" required class="${inputCls}" placeholder="ex: Apresentar oferta principal"/>
+      </div>
+      <div>
+        <label class="${labelCls}">URL de destino</label>
+        <input name="landing_url" type="url" required class="${inputCls} font-mono" placeholder="https://..."/>
+      </div>
+      <div class="flex items-center gap-2">
+        <input id="welcome_enabled" name="enabled" type="checkbox" checked class="w-4 h-4"/>
+        <label for="welcome_enabled" class="text-sm text-zinc-700 dark:text-zinc-300">Ativar este passo imediatamente</label>
+      </div>
+      <div class="flex gap-2 pt-3">
+        <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2.5 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 transition">Cancelar</button>
+        <button type="submit" class="flex-1 bg-gradient-to-br from-rose-500 to-fuchsia-500 hover:shadow-lg hover:shadow-rose-500/30 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition">Criar passo</button>
+      </div>
+    </form>
+  `);
+  document.getElementById('newWelcomeStepForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    const body = {
+      delay_minutes: parseInt(data.delay_minutes, 10),
+      template: data.template,
+      label: data.label,
+      landing_url: data.landing_url,
+      enabled: !!data.enabled,
+    };
+    const r = await api.post(`/api/welcome/${siteId}/steps`, body);
+    if (r.error) return toast(r.error);
+    closeModal();
+    toast('Passo criado');
+    loadSettings();
+  });
+}
+
+async function toggleWelcomeStep(stepId, enabled) {
+  await api.patch(`/api/welcome/steps/${stepId}`, { enabled });
+  toast(enabled ? 'Passo ativado' : 'Passo desativado');
+}
+
+async function deleteWelcomeStep(stepId) {
+  if (!confirm('Remover este passo?')) return;
+  await api.del(`/api/welcome/steps/${stepId}`);
+  toast('Passo removido');
+  loadSettings();
+}
+
 function copySnippet(id) {
   const el = document.getElementById(id);
   if (!el) return;
   navigator.clipboard.writeText(el.textContent).then(() => toast('Código copiado'));
 }
 
+function openNewSiteModal() {
+  const inputCls = 'w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
+  const labelCls = 'block text-xs font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wide mb-1.5';
+  showModal(`
+    <h3 class="text-xl font-bold text-zinc-900 dark:text-white mb-1">Novo site</h3>
+    <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-5">Cadastre um novo domínio para capturar inscritos</p>
+    <form id="newSiteForm" class="space-y-4">
+      <div>
+        <label class="${labelCls}">Identificador (sem espaços)</label>
+        <input name="name" required class="${inputCls} font-mono" placeholder="ex: meusite_blog"/>
+        <p class="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1">Usado internamente para identificar o site no código embed</p>
+      </div>
+      <div>
+        <label class="${labelCls}">Domínio</label>
+        <input name="domain" required class="${inputCls}" placeholder="meusite.com.br"/>
+        <p class="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1">Sem https:// e sem barras</p>
+      </div>
+      <div class="flex gap-2 pt-3">
+        <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2.5 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 transition">Cancelar</button>
+        <button type="submit" class="flex-1 btn-primary text-white px-4 py-2.5 rounded-lg text-sm font-medium">Criar site</button>
+      </div>
+    </form>
+  `);
+  document.getElementById('newSiteForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    const r = await api.post('/api/urls/sites', data);
+    if (r.error) return toast(r.error);
+    closeModal();
+    toast('Site criado');
+    loadSettings();
+  });
+}
+
+async function deleteSite(id, domain) {
+  if (!confirm(`Remover ${domain}?\n\nIsso vai apagar TUDO desse site: URLs, campanhas, inscritos.`)) return;
+  const r = await api.del(`/api/urls/sites/${id}`);
+  if (r && r.error) return toast(r.error);
+  toast('Site removido');
+  loadSettings();
+}
+
+function editSite(id) {
+  const sites = window._sites || [];
+  const site = sites.find(s => s.id === id);
+  if (!site) return;
+  const inputCls = 'w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
+  const labelCls = 'block text-xs font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wide mb-1.5';
+  showModal(`
+    <h3 class="text-xl font-bold text-zinc-900 dark:text-white mb-1">Renomear site</h3>
+    <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-5">Atualize o identificador ou o domínio</p>
+    <form id="editSiteForm" class="space-y-4">
+      <div>
+        <label class="${labelCls}">Identificador</label>
+        <input name="name" required value="${site.name}" class="${inputCls} font-mono"/>
+        <p class="text-[11px] text-amber-600 dark:text-amber-400 mt-1">⚠ Se trocar, atualize o atributo data-site no código embed dos sites já instalados</p>
+      </div>
+      <div>
+        <label class="${labelCls}">Domínio</label>
+        <input name="domain" required value="${site.domain}" class="${inputCls}"/>
+      </div>
+      <div class="flex gap-2 pt-3">
+        <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2.5 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 transition">Cancelar</button>
+        <button type="submit" class="flex-1 btn-primary text-white px-4 py-2.5 rounded-lg text-sm font-medium">Salvar</button>
+      </div>
+    </form>
+  `);
+  document.getElementById('editSiteForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    const r = await api.patch(`/api/urls/sites/${id}`, data);
+    if (r.error) return toast(r.error);
+    closeModal();
+    toast('Site atualizado');
+    loadSettings();
+  });
+}
+
 window.toggleUrl = toggleUrl;
+window.editUrl = editUrl;
 window.deleteUrl = deleteUrl;
 window.sendUrl = sendUrl;
 window.deleteIcon = deleteIcon;
@@ -578,5 +991,14 @@ window.closeModal = closeModal;
 window.showInsights = showInsights;
 window.closeInsights = closeInsights;
 window.copySnippet = copySnippet;
+window.openNewSiteModal = openNewSiteModal;
+window.deleteSite = deleteSite;
+window.editSite = editSite;
+window.setUrlFilter = setUrlFilter;
+window.setCampaignFilter = setCampaignFilter;
+window.openNewWelcomeStepModal = openNewWelcomeStepModal;
+window.toggleWelcomeStep = toggleWelcomeStep;
+window.deleteWelcomeStep = deleteWelcomeStep;
+window.saveSiteFrequency = saveSiteFrequency;
 
 checkAuth().then(() => navigate('inicio'));

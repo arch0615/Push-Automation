@@ -9,7 +9,7 @@ router.get('/', (req, res) => {
     SELECT c.id, c.izooto_campaign_id, c.sent_at, c.impressions, c.clicks, c.ctr,
            p.title, p.description, p.template, p.variation,
            u.url, u.label, u.niche,
-           s.name AS site_name, s.domain AS site_domain
+           s.id AS site_id, s.name AS site_name, s.domain AS site_domain
     FROM campaigns c
     JOIN copies p ON p.id = c.copy_id
     JOIN urls u ON u.id = p.url_id
@@ -20,13 +20,19 @@ router.get('/', (req, res) => {
   res.json(rows);
 });
 
-router.post('/send-now', async (req, res) => {
-  try {
-    const results = await runCycle();
-    res.json({ ok: true, results });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+router.post('/send-now', (req, res) => {
+  const activeUrls = db.prepare(`SELECT COUNT(*) AS n FROM urls WHERE status = 'ativa'`).get().n;
+  res.json({ ok: true, queued_urls: activeUrls, message: 'Disparo iniciado em segundo plano. Atualize a aba Campanhas em alguns segundos para ver os envios.' });
+
+  setImmediate(async () => {
+    try {
+      const results = await runCycle({ onlyFixedSites: false });
+      const sent = results.filter(r => r.sent).length;
+      console.log(`[send-now] manual cycle: sent=${sent} of ${results.length}`);
+    } catch (e) {
+      console.error('[send-now] manual cycle failed:', e.message);
+    }
+  });
 });
 
 router.post('/send-url/:id', async (req, res) => {

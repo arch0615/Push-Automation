@@ -7,8 +7,8 @@
   var SITE = script.getAttribute('data-site');
   if (!SITE) { console.warn('[push] data-site attribute required'); return; }
 
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    console.warn('[push] Web Push not supported');
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+    console.warn('[push] Web Push not supported in this browser');
     return;
   }
 
@@ -21,24 +21,42 @@
     return outputArray;
   }
 
-  function fetchJson(path, opts) {
-    return fetch(SERVER + path, opts).then(function (r) { return r.json(); });
+  async function registerSW() {
+    try {
+      var reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      try { await reg.update(); } catch (_) {}
+      return reg;
+    } catch (e) {
+      console.warn('[push] sw.js not found at site root. Upload it from the dashboard.', e.message);
+      return null;
+    }
   }
 
-  function register() {
-    return navigator.serviceWorker.register(SERVER + '/sw.js', { scope: '/' }).catch(function () {
-      // Fallback: try same-origin SW path
-      return navigator.serviceWorker.register('/sw.js');
+  // Auto-update existing SW on every page load
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function (regs) {
+      regs.forEach(function (reg) { try { reg.update(); } catch (_) {} });
     });
   }
 
   async function subscribe() {
     try {
-      var permission = await Notification.requestPermission();
-      if (permission !== 'granted') return;
+      if (Notification.permission === 'denied') return false;
 
-      var reg = await navigator.serviceWorker.ready;
-      var keyResp = await fetchJson('/api/push/vapid-key');
+      var permission = Notification.permission === 'granted'
+        ? 'granted'
+        : await Notification.requestPermission();
+      if (permission !== 'granted') return false;
+
+      var reg = await registerSW();
+      if (!reg) {
+        console.warn('[push] sw.js missing on site root — cannot complete subscription');
+        return false;
+      }
+
+      await navigator.serviceWorker.ready;
+
+      var keyResp = await fetch(SERVER + '/api/push/vapid-key').then(function (r) { return r.json(); });
       if (!keyResp.publicKey) throw new Error('No VAPID key');
 
       var existing = await reg.pushManager.getSubscription();
@@ -49,31 +67,35 @@
         });
       }
 
-      await fetch(SERVER + '/api/push/subscribe', {
+      var resp = await fetch(SERVER + '/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subscription: existing.toJSON(), site: SITE }),
       });
+      var body = await resp.json();
+      if (!resp.ok) {
+        console.warn('[push] subscribe failed:', body.error);
+        return false;
+      }
+      console.log('[push] subscribed to', SITE);
+      return true;
     } catch (e) {
       console.warn('[push] subscribe failed:', e.message);
+      return false;
     }
   }
 
-  function showPrompt() {
-    if (Notification.permission === 'granted') { subscribe(); return; }
-    if (Notification.permission === 'denied') return;
-
-    var bar = document.createElement('div');
-    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#1f2937;color:#fff;padding:14px 18px;font-family:system-ui,sans-serif;font-size:14px;display:flex;gap:12px;align-items:center;justify-content:center;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,0.3)';
-    bar.innerHTML = '<span>🔔 Receba as melhores ofertas em primeira mão</span>' +
-                    '<button id="pushAccept" style="background:#8b5cf6;color:#fff;border:none;padding:8px 18px;border-radius:8px;cursor:pointer;font-weight:600">Permitir</button>' +
-                    '<button id="pushDeny" style="background:transparent;color:#9ca3af;border:none;padding:8px 12px;cursor:pointer">Agora não</button>';
-    document.body.appendChild(bar);
-    document.getElementById('pushAccept').onclick = function () { bar.remove(); subscribe(); };
-    document.getElementById('pushDeny').onclick = function () { bar.remove(); };
+  function start() {
+    if (Notification.permission === 'granted' || Notification.permission === 'denied') {
+      if (Notification.permission === 'granted') subscribe();
+      return;
+    }
+    setTimeout(subscribe, 2000);
   }
 
-  register().then(function () {
-    setTimeout(showPrompt, 3000);
-  });
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    start();
+  } else {
+    window.addEventListener('DOMContentLoaded', start);
+  }
 })();

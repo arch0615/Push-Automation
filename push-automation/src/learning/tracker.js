@@ -1,7 +1,21 @@
 const db = require('../db/database');
 const { getCampaignStats } = require('../izooto/client');
 
+function isWebPushCampaign(campaignId) {
+  return String(campaignId || '').startsWith('wp_');
+}
+
 async function refreshOneCampaign(campaignRow) {
+  if (isWebPushCampaign(campaignRow.izooto_campaign_id)) {
+    const fresh = db.prepare('SELECT impressions, clicks, ctr FROM campaigns WHERE id = ?').get(campaignRow.id);
+    if (fresh && fresh.impressions > 0) {
+      const ctr = (fresh.clicks / fresh.impressions) * 100;
+      db.prepare('UPDATE campaigns SET ctr = ? WHERE id = ?').run(ctr, campaignRow.id);
+      return { id: campaignRow.id, ...fresh, ctr, source: 'webpush' };
+    }
+    return { id: campaignRow.id, source: 'webpush', skipped: 'no_data_yet' };
+  }
+
   const site = db.prepare(`
     SELECT s.* FROM sites s
     JOIN urls u ON u.site_id = s.id
@@ -20,7 +34,7 @@ async function refreshOneCampaign(campaignRow) {
     WHERE id = ?
   `).run(impressions, clicks, ctr, campaignRow.id);
 
-  return { id: campaignRow.id, impressions, clicks, ctr, mock: stats.mock || false };
+  return { id: campaignRow.id, impressions, clicks, ctr, source: 'izooto', mock: stats.mock || false };
 }
 
 async function refreshRecent(limit = 100) {
@@ -44,4 +58,4 @@ async function refreshRecent(limit = 100) {
   return results;
 }
 
-module.exports = { refreshOneCampaign, refreshRecent };
+module.exports = { refreshOneCampaign, refreshRecent, isWebPushCampaign };

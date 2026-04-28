@@ -14,8 +14,21 @@ function configure() {
   return true;
 }
 
+const PERMANENTLY_DEAD_CODES = new Set([400, 401, 403, 404, 410]);
+
+function isPayloadValid(p) {
+  if (!p) return false;
+  const title = String(p.title || '').trim();
+  const body = String(p.body || p.message || '').trim();
+  return title.length > 0 && body.length > 0;
+}
+
 async function sendToSubscriber(subscriber, payload) {
   configure();
+  if (!isPayloadValid(payload)) {
+    console.warn('[webpush] refusing to send empty payload to sub', subscriber.id);
+    return { ok: false, error: 'empty_payload' };
+  }
   const sub = {
     endpoint: subscriber.endpoint,
     keys: { p256dh: subscriber.p256dh, auth: subscriber.auth },
@@ -24,9 +37,9 @@ async function sendToSubscriber(subscriber, payload) {
     await webpush.sendNotification(sub, JSON.stringify(payload), { TTL: 3600 });
     return { ok: true };
   } catch (e) {
-    if (e.statusCode === 410 || e.statusCode === 404) {
+    if (PERMANENTLY_DEAD_CODES.has(e.statusCode)) {
       db.prepare('UPDATE subscribers SET active = 0 WHERE id = ?').run(subscriber.id);
-      return { ok: false, expired: true };
+      return { ok: false, expired: true, status: e.statusCode };
     }
     return { ok: false, error: e.message, status: e.statusCode };
   }

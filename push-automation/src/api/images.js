@@ -12,15 +12,23 @@ const GENERATED_DIR = path.join(__dirname, '../../generated');
 if (!fs.existsSync(ICONS_DIR)) fs.mkdirSync(ICONS_DIR, { recursive: true });
 if (!fs.existsSync(GENERATED_DIR)) fs.mkdirSync(GENERATED_DIR, { recursive: true });
 
+function setImageHeaders(res) {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.set('Cache-Control', 'public, max-age=86400');
+}
+
 router.get('/generated/:filename', (req, res) => {
   const file = path.join(GENERATED_DIR, path.basename(req.params.filename));
   if (!fs.existsSync(file)) return res.status(404).json({ error: 'Image not found' });
+  setImageHeaders(res);
   res.sendFile(file);
 });
 
 router.get('/icons/:filename', (req, res) => {
   const file = path.join(ICONS_DIR, path.basename(req.params.filename));
   if (!fs.existsSync(file)) return res.status(404).json({ error: 'Icon not found' });
+  setImageHeaders(res);
   res.sendFile(file);
 });
 

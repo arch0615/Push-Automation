@@ -15,6 +15,16 @@ router.patch('/', (req, res) => {
   if (entries.length === 0) return res.status(400).json({ error: 'No settings provided' });
   const stmt = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
   entries.forEach(([k, v]) => stmt.run(k, String(v)));
+
+  const schedulerKeys = ['send_times', 'timezone', 'daily_target', 'active_window_start', 'active_window_end'];
+  if (entries.some(([k]) => schedulerKeys.includes(k))) {
+    try {
+      const scheduler = require('../scheduler/cron');
+      const info = scheduler.start();
+      console.log('[settings] Scheduler restarted:', info);
+    } catch (e) { console.error('[settings] Scheduler restart failed:', e.message); }
+  }
+
   const rows = db.prepare('SELECT key, value FROM settings').all();
   const out = {};
   rows.forEach(r => { out[r.key] = r.value; });
