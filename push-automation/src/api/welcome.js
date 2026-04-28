@@ -29,13 +29,16 @@ router.delete('/steps/:id', (req, res) => {
   res.status(204).end();
 });
 
-router.post('/run-now', async (req, res) => {
-  try {
-    const result = await manager.processDueWelcomes();
-    res.json(result);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+router.post('/run-now', (req, res) => {
+  res.json({ ok: true, message: 'Welcome cycle iniciado em segundo plano.' });
+  setImmediate(async () => {
+    try {
+      const result = await manager.processDueWelcomes();
+      console.log(`[welcome] run-now: processed=${result.processed} sent=${result.sent} failed=${result.failed} due_total=${result.due_total}`);
+    } catch (e) {
+      console.error('[welcome] run-now failed:', e.message);
+    }
+  });
 });
 
 module.exports = router;

@@ -14,7 +14,17 @@
       "Bash(curl -sk -o /dev/null -w \"  POST /track-click/0 → HTTP %{http_code}\\\\n\" -X POST https://pushudc.top/api/push/track-click/0)",
       "Bash(curl -sk -o /dev/null -w \"  POST /track-click/99999 → HTTP %{http_code}\\\\n\" -X POST https://pushudc.top/api/push/track-click/99999)",
       "Bash(curl -sk -o /dev/null -w \"  POST /track-welcome-click/0 → HTTP %{http_code}\\\\n\" -X POST https://pushudc.top/api/push/track-welcome-click/0)",
-      "Bash(curl -sk https://pushudc.top/embed.js)"
+      "Bash(curl -sk https://pushudc.top/embed.js)",
+      "Bash(curl -sk -o /dev/null -w \"  POST /track-click/100003 → HTTP %{http_code}\\\\n\" -X POST https://pushudc.top/api/push/track-click/100003)",
+      "Bash(curl -sk -o /dev/null -w \"POST /track-click/100003 → HTTP %{http_code}\\\\n\" -X POST https://pushudc.top/api/push/track-click/100003)",
+      "Bash(rm -f /tmp/dbg.txt)",
+      "Bash(curl -sk -c /tmp/dbg.txt -X POST https://pushudc.top/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"admin\",\"password\":\"admin123\"}')",
+      "Bash(curl -sk -b /tmp/dbg.txt -X POST https://pushudc.top/api/urls -H 'Content-Type: application/json' -d '{\"site_id\":1,\"url\":\"https://test.com/dbg\",\"label\":\"DebugTest\",\"niche\":\"finanças\",\"daily_limit\":5}')",
+      "Bash(curl -sk -b /tmp/pause.txt https://pushudc.top/api/settings)",
+      "Bash(curl -sk -b /tmp/per.txt \"https://pushudc.top/api/reports/summary?period=today\")",
+      "Bash(rm -f /tmp/per2.txt)",
+      "Bash(curl -sk -c /tmp/per2.txt -X POST https://pushudc.top/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"admin\",\"password\":\"admin123\"}')",
+      "Bash(curl -sk -b /tmp/per2.txt 'https://pushudc.top/api/reports/summary?period=today')"
     ]
   }
 }

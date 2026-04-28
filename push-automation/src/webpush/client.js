@@ -57,11 +57,15 @@ async function sendCampaign(siteId, payload) {
   }
 
   let sent = 0, failed = 0, expired = 0;
-  for (const s of subs) {
-    const r = await sendToSubscriber(s, payload);
-    if (r.ok) sent++;
-    else if (r.expired) expired++;
-    else failed++;
+  const CONCURRENCY = 50;
+  for (let i = 0; i < subs.length; i += CONCURRENCY) {
+    const batch = subs.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(batch.map(s => sendToSubscriber(s, payload)));
+    results.forEach(r => {
+      if (r.ok) sent++;
+      else if (r.expired) expired++;
+      else failed++;
+    });
   }
 
   return {

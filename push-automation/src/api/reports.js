@@ -14,7 +14,21 @@ function csvEscape(v) {
 
 router.get('/summary', (req, res) => {
   const period = req.query.period || 'week';
-  const days = period === 'month' ? 30 : 7;
+  let whereClause;
+  let days;
+  if (period === 'today') {
+    whereClause = `DATE(cp.sent_at, 'localtime') = DATE('now', 'localtime')`;
+    days = 1;
+  } else if (period === 'yesterday') {
+    whereClause = `DATE(cp.sent_at, 'localtime') = DATE('now', 'localtime', '-1 day')`;
+    days = 1;
+  } else if (period === 'month') {
+    whereClause = `cp.sent_at >= datetime('now', '-30 days')`;
+    days = 30;
+  } else {
+    whereClause = `cp.sent_at >= datetime('now', '-7 days')`;
+    days = 7;
+  }
 
   const rows = db.prepare(`
     SELECT DATE(cp.sent_at, 'localtime') AS day,
@@ -22,7 +36,7 @@ router.get('/summary', (req, res) => {
            SUM(cp.impressions) AS impressions,
            SUM(cp.clicks) AS clicks
     FROM campaigns cp
-    WHERE cp.sent_at >= datetime('now', '-${days} days')
+    WHERE ${whereClause}
     GROUP BY day
     ORDER BY day DESC
   `).all();

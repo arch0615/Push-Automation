@@ -68,7 +68,12 @@ check "Missing fields rejected"    "$(POST /api/urls '{"site_id":1}')" "required
 check "Invalid site_id rejected"   "$(POST /api/urls '{"site_id":999,"url":"https://x.com","label":"x","niche":"geral"}')" "Invalid site_id"
 check "Non-existent URL returns 404" "$(GET /api/urls/99999)" "URL not found"
 
-CREATE=$(POST /api/urls '{"site_id":1,"url":"https://test.com/smoke","label":"SmokeTest","niche":"finanças","daily_limit":5}')
+# Create an isolated fake site for testing — never reuses real-customer sites
+# (real sites have real subscribers; sending tests to them would spam users)
+TEST_SITE=$(POST /api/urls/sites "{\"name\":\"_test_$$\",\"domain\":\"_test_$$.invalid\"}")
+TEST_SITE_ID=$(echo "$TEST_SITE" | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])')
+
+CREATE=$(POST /api/urls "{\"site_id\":$TEST_SITE_ID,\"url\":\"https://test.com/smoke\",\"label\":\"SmokeTest\",\"niche\":\"finanças\",\"daily_limit\":5}")
 URL_ID=$(echo "$CREATE" | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])')
 check "URL created"                "$CREATE" '"label":"SmokeTest"'
 check "URL in list"                "$(GET /api/urls)" "SmokeTest"
@@ -223,6 +228,7 @@ check "Dark mode script present"   "$(curl -sk "$BASE/")" 'localStorage.getItem'
 # Cleanup
 section "Cleanup"
 DEL /api/urls/$URL_ID > /dev/null
+DEL /api/urls/sites/$TEST_SITE_ID > /dev/null
 check "Test URL deleted"           "$(GET /api/urls)" ""
 LOGOUT=$(POST /api/auth/logout)
 check "Logout returns ok"          "$LOGOUT" '"ok":true'

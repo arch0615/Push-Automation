@@ -60,8 +60,20 @@ router.options('/vapid-key', (req, res) => {
   res.sendStatus(204);
 });
 
+const WELCOME_OFFSET = 100000;
+
 function recordClick(campaignId, ip, ua) {
   try {
+    // Old Service Workers route welcome clicks here using a synthetic
+    // campaignId in the welcome range — redirect them to welcome_clicks.
+    if (campaignId >= WELCOME_OFFSET) {
+      const stepId = campaignId - WELCOME_OFFSET;
+      const step = db.prepare('SELECT id FROM welcome_steps WHERE id = ?').get(stepId);
+      db.prepare('INSERT INTO welcome_clicks (step_id, ip, user_agent) VALUES (?, ?, ?)')
+        .run(step ? step.id : null, ip, ua || '');
+      return;
+    }
+
     let resolvedCampaignId = null;
     let siteId = null;
 

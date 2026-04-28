@@ -111,7 +111,7 @@ async function loadInicio() {
   document.getElementById('summaryCards').innerHTML = [
     statCard({ label: 'Inscritos totais', value: totalSubs.toLocaleString('pt-BR'), icon: '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>', gradient: 'from-violet-500 to-fuchsia-500', sub: `${sites.length} sites` }),
     statCard({ label: 'URLs ativas', value: activeUrls, icon: icons.active, gradient: 'from-emerald-500 to-teal-500', sub: `de ${urls.length}` }),
-    statCard({ label: 'Pushes no período', value: t.sent || 0, icon: icons.send, gradient: 'from-orange-500 to-amber-500' }),
+    statCard({ label: ({today:'Pushes hoje',yesterday:'Pushes ontem',week:'Pushes (7 dias)',month:'Pushes (30 dias)'}[period] || 'Pushes no período'), value: t.sent || 0, icon: icons.send, gradient: 'from-orange-500 to-amber-500' }),
     statCard({ label: 'CTR médio', value: pct(t.ctr || 0), icon: icons.chart, gradient: 'from-blue-500 to-cyan-500' }),
   ].join('');
 
@@ -129,7 +129,8 @@ async function loadInicio() {
 
   renderChart(summary.daily || []);
 
-  const days = period === 'month' ? 30 : 7;
+  const periodToDays = { today: 1, yesterday: 1, week: 7, month: 30 };
+  const days = periodToDays[period] || 7;
   document.getElementById('exportCsvBtn').href = `/api/reports/export.csv?days=${days}`;
 }
 
@@ -599,6 +600,10 @@ async function loadSettings() {
   document.getElementById('autoApprove').checked = settings.auto_approve === 'true';
   document.getElementById('trackingParams').value = settings.tracking_params || '';
 
+  const paused = settings.system_paused === 'true';
+  document.getElementById('emergencyPauseBanner').classList.toggle('hidden', !paused);
+  document.getElementById('emergencyPauseBtn').classList.toggle('hidden', paused);
+
   document.getElementById('perSiteFrequency').innerHTML = sites.map(s => {
     const target = s.daily_target ?? 0;
     const start = s.active_window_start || '08:00';
@@ -700,6 +705,19 @@ async function saveApiKey(siteId) {
   toast('Chave salva');
   loadSettings();
 }
+
+document.getElementById('emergencyPauseBtn').addEventListener('click', async () => {
+  if (!confirm('PAUSAR todos os envios automáticos?\n\nNenhum push (regular ou welcome) será enviado até você retomar.')) return;
+  await api.patch('/api/settings', { system_paused: 'true' });
+  toast('Sistema pausado');
+  loadSettings();
+});
+
+document.getElementById('emergencyResumeBtn').addEventListener('click', async () => {
+  await api.patch('/api/settings', { system_paused: 'false' });
+  toast('Sistema retomado');
+  loadSettings();
+});
 
 document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
   const body = {

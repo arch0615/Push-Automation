@@ -1,8 +1,13 @@
 const express = require('express');
 const db = require('../db/database');
 const { runCycle, sendOneForUrl } = require('../scheduler/sender');
+const settings = require('./settings');
 
 const router = express.Router();
+
+function isSystemPaused() {
+  return settings.get('system_paused', 'false') === 'true';
+}
 
 router.get('/', (req, res) => {
   const rows = db.prepare(`
@@ -21,6 +26,7 @@ router.get('/', (req, res) => {
 });
 
 router.post('/send-now', (req, res) => {
+  if (isSystemPaused()) return res.status(409).json({ error: 'Sistema pausado. Retome em Configurações para disparar.' });
   const activeUrls = db.prepare(`SELECT COUNT(*) AS n FROM urls WHERE status = 'ativa'`).get().n;
   res.json({ ok: true, queued_urls: activeUrls, message: 'Disparo iniciado em segundo plano. Atualize a aba Campanhas em alguns segundos para ver os envios.' });
 
@@ -36,8 +42,22 @@ router.post('/send-now', (req, res) => {
 });
 
 router.post('/send-url/:id', async (req, res) => {
+  if (isSystemPaused()) return res.status(409).json({ error: 'Sistema pausado. Retome em Configurações para disparar.' });
   const url = db.prepare('SELECT * FROM urls WHERE id = ?').get(req.params.id);
   if (!url) return res.status(404).json({ error: 'URL not found' });
+
+  if (url.status !== 'ativa') {
+    return res.json({ url_id: url.id, skipped: 'paused' });
+  }
+  const sentToday = db.prepare(`
+    SELECT COUNT(*) AS n FROM campaigns c
+    JOIN copies p ON p.id = c.copy_id
+    WHERE p.url_id = ? AND DATE(c.sent_at) = DATE('now', 'localtime')
+  `).get(url.id).n;
+  if (sentToday >= (url.daily_limit || 3)) {
+    return res.json({ url_id: url.id, skipped: 'daily_limit_reached', sentToday });
+  }
+
   try {
     const result = await sendOneForUrl(url);
     res.json({ url_id: url.id, ...result });

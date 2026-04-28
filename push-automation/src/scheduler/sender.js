@@ -61,6 +61,7 @@ async function ensureFreshVariations(url) {
 }
 
 async function sendOneForUrl(url) {
+  if (settings.get('system_paused', 'false') === 'true') return { skipped: 'system_paused' };
   if (url.status !== 'ativa') return { skipped: 'paused' };
 
   const sentToday = getSentToday(url.id);
