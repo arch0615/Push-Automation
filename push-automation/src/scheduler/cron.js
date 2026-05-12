@@ -3,6 +3,7 @@ const db = require('../db/database');
 const { runCycle, runSmartTick } = require('./sender');
 const { refreshRecent } = require('../learning/tracker');
 const { processDueWelcomes } = require('../welcome/manager');
+const { autoPauseLosers } = require('../learning/copyLearning');
 const settings = require('../api/settings');
 
 const jobs = [];
@@ -76,6 +77,14 @@ function start() {
     try {
       const r = await refreshRecent(100);
       console.log(`[ctr] Updated ${r.length} campaigns`);
+
+      const urls = db.prepare(`SELECT DISTINCT url_id FROM copies`).all();
+      let totalPaused = 0;
+      for (const { url_id } of urls) {
+        const r = autoPauseLosers(url_id);
+        if (r.paused) totalPaused += r.paused;
+      }
+      if (totalPaused) console.log(`[copy-learning] auto-paused ${totalPaused} losing copies across ${urls.length} URLs`);
     } catch (e) {
       console.error('[ctr] Refresh failed:', e.message);
     }

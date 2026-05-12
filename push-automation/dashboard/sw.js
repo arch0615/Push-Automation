@@ -1,4 +1,4 @@
-var SW_VERSION = 'v3-2026-04-28';
+var SW_VERSION = 'v4-2026-04-29';
 var TRACKING_HOST = 'https://pushudc.top';
 
 self.addEventListener('install', function (event) {
@@ -13,24 +13,26 @@ self.addEventListener('push', function (event) {
   var data = null;
   try { data = event.data && event.data.json(); } catch (_) {
     var raw = event.data && event.data.text();
-    if (raw) data = { title: 'Notificação', body: raw };
+    if (raw && raw.trim()) data = { title: 'Notificação', body: raw };
   }
 
-  // Suppress empty / malformed payloads (e.g. test pings) by showing a
-  // silent self-closing notification — required because Chrome will
-  // otherwise show its own "Background activity" placeholder.
-  if (!data || (!data.title && !data.body && !data.message)) {
+  // Trim whitespace so " " counts as empty
+  var t = data && data.title ? String(data.title).trim() : '';
+  var b = data && (data.body || data.message) ? String(data.body || data.message).trim() : '';
+
+  if (!t || !b) {
+    // Chrome requires we show a notification. We show one with a tag
+    // and immediately replace+close it via the same tag so nothing
+    // visible accumulates.
     event.waitUntil(
-      self.registration.showNotification(' ', { tag: 'silent-ping', silent: true, requireInteraction: false })
-        .then(function () {
-          return self.registration.getNotifications({ tag: 'silent-ping' });
-        })
+      self.registration.showNotification('•', { tag: 'silent-ping', silent: true, requireInteraction: false, body: '' })
+        .then(function () { return self.registration.getNotifications({ tag: 'silent-ping' }); })
         .then(function (notifs) { notifs.forEach(function (n) { n.close(); }); })
     );
     return;
   }
 
-  var title = data.title || 'Notificação';
+  var title = t;
   var actions = [];
   if (data.cta) {
     actions.push({ action: 'open', title: data.cta });
@@ -38,7 +40,7 @@ self.addEventListener('push', function (event) {
 
   var fallbackIcon = (data.trackingHost || TRACKING_HOST) + '/favicon-32x32.png';
   var options = {
-    body: data.body || data.message || '',
+    body: b,
     icon: data.icon || fallbackIcon,
     image: data.image,
     badge: data.badge || fallbackIcon,

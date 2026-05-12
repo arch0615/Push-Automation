@@ -22,7 +22,7 @@ function pickNextCopy(urlId) {
   const pending = db.prepare(`
     SELECT c.* FROM copies c
     LEFT JOIN campaigns cp ON cp.copy_id = c.id
-    WHERE c.url_id = ? AND cp.id IS NULL
+    WHERE c.url_id = ? AND cp.id IS NULL AND (c.status IS NULL OR c.status != 'paused')
     ORDER BY c.variation ASC, c.created_at ASC
     LIMIT 1
   `).get(urlId);
@@ -39,10 +39,11 @@ async function ensureFreshVariations(url) {
   if (pendingCount >= MIN_VARIATIONS) return 0;
 
   const needed = MIN_VARIATIONS - pendingCount;
-  const variations = await generateVariations(url.url, url.label, url.niche, needed, url.id, url.language || 'pt-BR');
+  const lang = url.language || 'pt-BR';
+  const variations = await generateVariations(url.url, url.label, url.niche, needed, url.id, lang);
   const insert = db.prepare(`
-    INSERT INTO copies (url_id, template, title, description, image_filename, variation)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO copies (url_id, template, title, description, image_filename, variation, language)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
   let created = 0;
   for (let i = 0; i < variations.length; i++) {
@@ -54,7 +55,7 @@ async function ensureFreshVariations(url) {
     } catch (e) {
       console.error(`Image failed for ${v.template}:`, e.message);
     }
-    insert.run(url.id, v.template, v.title, v.description, imageFilename, pendingCount + i + 1);
+    insert.run(url.id, v.template, v.title, v.description, imageFilename, pendingCount + i + 1, lang);
     created++;
   }
   return created;

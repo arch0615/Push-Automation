@@ -130,6 +130,10 @@
             <svg class="nav-icon w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             Modelos
           </div>
+          <div class="nav-item px-3 py-2.5 rounded-lg text-sm font-medium flex items-center gap-3 cursor-pointer border border-transparent" data-page="exemplos">
+            <svg class="nav-icon w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            Exemplos
+          </div>
           <div class="nav-item px-3 py-2.5 rounded-lg text-sm font-medium flex items-center gap-3 cursor-pointer border border-transparent" data-page="configuracoes">
             <svg class="nav-icon w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             Configurações
@@ -185,7 +189,7 @@
 
           <div id="summaryCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"></div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm p-6 lg:col-span-2">
               <div class="flex items-center justify-between mb-5">
                 <div>
@@ -203,6 +207,21 @@
               </div>
               <div id="sitesList" class="space-y-3"></div>
             </div>
+          </div>
+
+          <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm p-6">
+            <div class="flex items-center justify-between mb-5">
+              <div>
+                <h3 class="font-semibold text-zinc-900 dark:text-white">🏆 Pushes mais populares por site</h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Top copies que a IA está aprendendo a reproduzir</p>
+              </div>
+              <select id="topCopiesMin" class="px-3 py-1.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                <option value="20">Min 20 envios</option>
+                <option value="50">Min 50 envios</option>
+                <option value="100">Min 100 envios</option>
+              </select>
+            </div>
+            <div id="topCopies" class="space-y-5"></div>
           </div>
         </section>
 
@@ -326,6 +345,46 @@
           <div id="iconsGrid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4"></div>
         </section>
 
+        <!-- Exemplos -->
+        <section id="page-exemplos" class="page p-8 max-w-7xl mx-auto">
+          <div class="flex items-start justify-between mb-6">
+            <div>
+              <h2 class="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Biblioteca de exemplos</h2>
+              <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Faça upload de prints de notificações que você gosta — a IA vai aprender o estilo e usar como referência</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="addTextExampleBtn" class="px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg text-sm font-medium flex items-center gap-2 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h7"/></svg>
+                Adicionar texto
+              </button>
+              <label class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-medium cursor-pointer flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                Enviar print
+                <input id="exampleUpload" type="file" accept="image/png,image/jpeg,image/webp" class="hidden"/>
+              </label>
+            </div>
+          </div>
+
+          <div class="mb-6 p-4 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-500/20">
+            <div class="flex gap-3">
+              <div class="text-blue-600 dark:text-blue-400 mt-0.5">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <div class="flex-1">
+                <div class="text-sm font-semibold text-zinc-900 dark:text-white mb-1">3 jeitos de adicionar exemplo</div>
+                <ul class="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed space-y-1 mt-1">
+                  <li>📋 <span class="font-semibold">Cole com Ctrl+V</span> direto nesta página — funciona com print do clipboard, sem precisar salvar arquivo</li>
+                  <li>📁 <span class="font-semibold">Enviar print</span> — escolhe um arquivo de imagem (até 3-4 notificações empilhadas; a IA separa cada uma)</li>
+                  <li>✍️ <span class="font-semibold">Adicionar texto</span> — digita título + descrição direto, sem imagem (mais rápido)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div id="examplesFilter" class="flex items-center gap-2 mb-4 flex-wrap"></div>
+          <div id="examplesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </section>
+
         <!-- Configurações -->
         <section id="page-configuracoes" class="page p-8 max-w-4xl mx-auto">
           <div class="mb-8">
@@ -386,6 +445,45 @@
                   <label class="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wide mb-1.5">URL pública</label>
                   <input id="publicBaseUrl" type="text" class="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"/>
                 </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wide mb-1.5">Provedor de IA</label>
+                  <select id="aiProvider" class="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+                    <option value="openai">OpenAI</option>
+                    <option value="claude">Anthropic Claude</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wide mb-1.5">Modelo</label>
+                  <select id="aiModel" class="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent">
+                    <optgroup label="OpenAI" id="optgroupOpenAI">
+                      <option value="gpt-4o-mini">GPT-4o mini — mais barato (≈$0.15/1M)</option>
+                      <option value="gpt-4o">GPT-4o — qualidade alta (≈$2.50/1M)</option>
+                      <option value="gpt-4.1-mini">GPT-4.1 mini — equilíbrio</option>
+                      <option value="gpt-4.1">GPT-4.1 — top de linha</option>
+                      <option value="o4-mini">o4-mini — raciocínio</option>
+                    </optgroup>
+                    <optgroup label="Anthropic" id="optgroupClaude">
+                      <option value="claude-haiku-4-5">Claude Haiku 4.5 — rápido</option>
+                      <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — equilíbrio</option>
+                      <option value="claude-opus-4-7">Claude Opus 4.7 — top de linha</option>
+                    </optgroup>
+                  </select>
+                </div>
+              </div>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500 -mt-2">Mudança aplica nos próximos disparos sem precisar reiniciar.</p>
+
+              <div class="flex items-center justify-between p-3.5 bg-amber-50 dark:bg-amber-500/10 rounded-lg border border-amber-200/50 dark:border-amber-500/30">
+                <div class="flex-1 pr-3">
+                  <div class="text-sm font-semibold text-zinc-900 dark:text-white">🛡️ Modo seguro (anti-banimento da OpenAI)</div>
+                  <div class="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">Suaviza o estilo "fake notification" pra evitar violar as políticas. CTR pode cair, mas reduz risco da conta ser suspensa.</div>
+                  <div class="text-[11px] text-amber-700 dark:text-amber-400 mt-1.5 font-medium">⚡ Quando o provedor é OpenAI, o modo seguro fica <u>sempre ativo</u> (independente deste botão) — protege a conta automaticamente. Use o Claude se quiser modo agressivo.</div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                  <input id="aiSafeMode" type="checkbox" class="sr-only peer"/>
+                  <div class="w-11 h-6 bg-zinc-300 dark:bg-zinc-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                </label>
               </div>
               <div>
                 <label class="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wide mb-1.5">Parâmetros de rastreio (UTM)</label>

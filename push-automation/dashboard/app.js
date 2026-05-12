@@ -78,6 +78,7 @@ function navigate(page) {
   if (page === 'urls') loadUrls();
   if (page === 'campanhas') loadCampaigns();
   if (page === 'modelos') loadIcons();
+  if (page === 'exemplos') loadExamples();
   if (page === 'configuracoes') loadSettings();
 }
 
@@ -132,6 +133,8 @@ async function loadInicio() {
   const periodToDays = { today: 1, yesterday: 1, week: 7, month: 30 };
   const days = periodToDays[period] || 7;
   document.getElementById('exportCsvBtn').href = `/api/reports/export.csv?days=${days}`;
+
+  loadTopCopies();
 }
 
 function renderChart(daily) {
@@ -179,6 +182,66 @@ function renderChart(daily) {
       </div>
     </div>
   `;
+}
+
+async function loadTopCopies() {
+  const minImpressions = document.getElementById('topCopiesMin')?.value || '20';
+  const data = await api.get(`/api/reports/top-copies?min_impressions=${minImpressions}&limit=5`);
+  const container = document.getElementById('topCopies');
+  if (!container) return;
+
+  const html = data.map(s => {
+    if (s.copies.length === 0) {
+      return `
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 dark:from-violet-500/20 dark:to-fuchsia-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400 font-bold text-xs">${s.site_domain.slice(0, 1).toUpperCase()}</div>
+            <div class="font-medium text-zinc-900 dark:text-white text-sm">${s.site_domain}</div>
+          </div>
+          <div class="text-xs text-zinc-400 dark:text-zinc-500 italic ml-9">Aguardando dados (mínimo de envios não atingido ainda)</div>
+        </div>
+      `;
+    }
+    return `
+      <div>
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 dark:from-violet-500/20 dark:to-fuchsia-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400 font-bold text-xs">${s.site_domain.slice(0, 1).toUpperCase()}</div>
+          <div class="font-medium text-zinc-900 dark:text-white text-sm">${s.site_domain}</div>
+          <span class="text-[11px] text-zinc-500 dark:text-zinc-500">${s.copies.length} ${s.copies.length === 1 ? 'top copy' : 'top copies'}</span>
+        </div>
+        <div class="space-y-2 ml-9">
+          ${s.copies.map((c, i) => {
+            const isPaused = c.status === 'paused';
+            const ctrClass = c.ctr > 5 ? 'text-emerald-600 dark:text-emerald-400' : c.ctr > 2 ? 'text-amber-600 dark:text-amber-400' : 'text-zinc-600 dark:text-zinc-400';
+            return `
+              <div class="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 ${isPaused ? 'bg-zinc-50 dark:bg-zinc-800/30 opacity-60' : 'bg-white dark:bg-zinc-900'}">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-start gap-2 min-w-0 flex-1">
+                    <div class="text-xs font-bold text-zinc-400 dark:text-zinc-500 mt-0.5">#${i + 1}</div>
+                    <div class="min-w-0">
+                      <div class="font-semibold text-zinc-900 dark:text-white text-sm truncate">${c.title}</div>
+                      <div class="text-xs text-zinc-600 dark:text-zinc-400 truncate">${c.description}</div>
+                      <div class="flex items-center gap-3 mt-1 text-[11px]">
+                        <span class="text-zinc-500 dark:text-zinc-500">${c.url_label}</span>
+                        <span class="px-1.5 py-0.5 rounded bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 font-mono">${c.template}</span>
+                        ${isPaused ? '<span class="px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 font-semibold">pausada</span>' : ''}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="text-right whitespace-nowrap">
+                    <div class="font-bold ${ctrClass} font-mono">${c.ctr.toFixed(1)}%</div>
+                    <div class="text-[10px] text-zinc-400 dark:text-zinc-500">${c.clicks}/${c.impressions}</div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = html;
 }
 
 async function refreshCtr() {
@@ -559,6 +622,185 @@ async function loadIcons() {
   `).join('');
 }
 
+async function loadExamples() {
+  const filter = window._examplesFilter ?? 'all';
+  const [examples, sites] = await Promise.all([
+    api.get(`/api/examples${filter && filter !== 'all' ? '?site_id=' + filter : ''}`),
+    api.get('/api/urls/sites'),
+  ]);
+
+  const filterEl = document.getElementById('examplesFilter');
+  filterEl.innerHTML = `
+    <span class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mr-2">Mostrar:</span>
+    <button onclick="setExamplesFilter('all')" class="px-3 py-1.5 rounded-lg text-xs font-medium transition ${filter === 'all' ? 'bg-violet-600 text-white' : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'}">Todos</button>
+    ${sites.map(s => `<button onclick="setExamplesFilter(${s.id})" class="px-3 py-1.5 rounded-lg text-xs font-medium transition ${filter === s.id ? 'bg-violet-600 text-white' : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800'}">${s.domain}</button>`).join('')}
+  `;
+
+  const grid = document.getElementById('examplesGrid');
+  if (examples.length === 0) {
+    grid.innerHTML = `
+      <div class="col-span-full text-center py-16 text-zinc-400 dark:text-zinc-500">
+        <div class="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 mx-auto mb-3 flex items-center justify-center">
+          <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+        </div>
+        <div class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Nenhum exemplo enviado ainda</div>
+        <div class="text-xs mt-1">Clique em "Enviar print" para começar</div>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = examples.map(e => `
+    <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200/80 dark:border-zinc-800 overflow-hidden ${e.enabled ? '' : 'opacity-60'}">
+      ${e.image_filename ? `
+        <div class="aspect-[4/3] bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center overflow-hidden">
+          <img src="/api/examples/image/${e.image_filename}" class="max-w-full max-h-full object-contain" alt="example"/>
+        </div>
+      ` : `
+        <div class="aspect-[4/3] bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 dark:from-violet-500/20 dark:to-fuchsia-500/20 flex items-center justify-center">
+          <svg class="w-12 h-12 text-violet-400 dark:text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h7"/></svg>
+        </div>
+      `}
+      <div class="p-3">
+        ${e.title ? `<div class="text-sm font-semibold text-zinc-900 dark:text-white truncate">${e.title}</div>` : '<div class="text-xs italic text-amber-600 dark:text-amber-400">Texto não reconhecido</div>'}
+        ${e.description ? `<div class="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2">${e.description}</div>` : ''}
+        <div class="flex items-center justify-between mt-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+          <div class="text-[11px] text-zinc-500 dark:text-zinc-500">
+            ${e.site_domain ? `<span class="font-mono">${e.site_domain}</span>` : '<span class="text-violet-600 dark:text-violet-400">Global</span>'}
+          </div>
+          <div class="flex items-center gap-1">
+            ${!e.title ? `<button onclick="retryExampleOcr(${e.id})" class="text-[11px] text-blue-600 hover:underline">Tentar OCR de novo</button>` : ''}
+            <label class="relative inline-flex items-center cursor-pointer ml-1">
+              <input type="checkbox" ${e.enabled ? 'checked' : ''} onchange="toggleExample(${e.id}, this.checked)" class="sr-only peer"/>
+              <div class="w-8 h-4 bg-zinc-300 dark:bg-zinc-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-violet-600"></div>
+            </label>
+            <button onclick="deleteExample(${e.id})" class="p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-600 dark:text-rose-400">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function setExamplesFilter(filter) {
+  window._examplesFilter = filter;
+  loadExamples();
+}
+
+async function uploadExample(file, siteId) {
+  const fd = new FormData();
+  fd.append('image', file);
+  if (siteId && siteId !== 'all') fd.append('site_id', siteId);
+  toast('Enviando e extraindo texto…');
+  const r = await fetch('/api/examples', { method: 'POST', body: fd });
+  const j = await r.json();
+  if (!r.ok) return toast(j.error || 'Falha no upload');
+  if (j.extracted === 0) {
+    toast(j.message || 'Imagem salva, OCR não reconheceu texto');
+  } else {
+    toast(`${j.extracted} notificação(ões) extraída(s) e salva(s)`);
+  }
+  loadExamples();
+}
+
+async function toggleExample(id, enabled) {
+  await api.patch(`/api/examples/${id}`, { enabled });
+  toast(enabled ? 'Ativado' : 'Desativado');
+}
+
+async function deleteExample(id) {
+  if (!confirm('Remover este exemplo?')) return;
+  await api.del(`/api/examples/${id}`);
+  toast('Removido');
+  loadExamples();
+}
+
+async function retryExampleOcr(id) {
+  toast('Re-executando OCR…');
+  const r = await fetch(`/api/examples/${id}/retry-ocr`, { method: 'POST' });
+  const j = await r.json();
+  if (!r.ok) return toast(j.error || 'Falha');
+  toast(j.extracted ? `${j.extracted} extraído(s)` : (j.message || 'Sem texto reconhecido'));
+  loadExamples();
+}
+
+document.getElementById('exampleUpload')?.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const siteId = window._examplesFilter || 'all';
+  await uploadExample(file, siteId);
+  e.target.value = '';
+});
+
+function openTextExampleModal() {
+  const sites = window._sites || [];
+  const inputCls = 'w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
+  const labelCls = 'block text-xs font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wide mb-1.5';
+  const currentFilter = window._examplesFilter ?? 'all';
+  showModal(`
+    <h3 class="text-xl font-bold text-zinc-900 dark:text-white mb-1">Adicionar exemplo (texto)</h3>
+    <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-5">Sem imagem — só o texto que serve de referência de estilo pra IA</p>
+    <form id="textExampleForm" class="space-y-4">
+      <div>
+        <label class="${labelCls}">Site (deixe vazio = global)</label>
+        <select name="site_id" class="${inputCls}">
+          <option value="">Global (todos os sites)</option>
+          ${sites.map(s => `<option value="${s.id}" ${currentFilter == s.id ? 'selected' : ''}>${s.domain}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label class="${labelCls}">Título do push</label>
+        <input name="title" required maxlength="120" class="${inputCls}" placeholder='Ex: 🎁 VOCÊ RECEBEU 1500 ROBUX!'/>
+      </div>
+      <div>
+        <label class="${labelCls}">Descrição (opcional)</label>
+        <input name="description" maxlength="200" class="${inputCls}" placeholder='Ex: Resgate antes que expire em 24h'/>
+      </div>
+      <div class="flex gap-2 pt-3">
+        <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2.5 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 transition">Cancelar</button>
+        <button type="submit" class="flex-1 btn-primary text-white px-4 py-2.5 rounded-lg text-sm font-medium">Adicionar</button>
+      </div>
+    </form>
+  `);
+  document.getElementById('textExampleForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    const r = await api.post('/api/examples/text', data);
+    if (r.error) return toast(r.error);
+    closeModal();
+    toast('Exemplo adicionado');
+    loadExamples();
+  });
+}
+
+document.getElementById('addTextExampleBtn')?.addEventListener('click', () => {
+  if (!window._sites) {
+    api.get('/api/urls/sites').then(s => { window._sites = s; openTextExampleModal(); });
+  } else {
+    openTextExampleModal();
+  }
+});
+
+// Paste image directly with Ctrl+V on Examples page
+document.addEventListener('paste', async (event) => {
+  const examplesPage = document.getElementById('page-exemplos');
+  if (!examplesPage || !examplesPage.classList.contains('active')) return;
+  const items = (event.clipboardData || event.originalEvent?.clipboardData)?.items || [];
+  for (const item of items) {
+    if (item.type && item.type.startsWith('image/')) {
+      event.preventDefault();
+      const blob = item.getAsFile();
+      if (!blob) continue;
+      const ext = (blob.type.split('/')[1] || 'png').toLowerCase();
+      const file = new File([blob], `pasted-${Date.now()}.${ext === 'jpeg' ? 'png' : ext}`, { type: blob.type });
+      const siteId = window._examplesFilter || 'all';
+      await uploadExample(file, siteId);
+      return;
+    }
+  }
+});
+
 async function deleteIcon(name) {
   if (!confirm(`Remover o ícone ${name}?`)) return;
   await api.del(`/images/icons/${encodeURIComponent(name)}`);
@@ -599,6 +841,10 @@ async function loadSettings() {
   document.getElementById('publicBaseUrl').value = settings.public_base_url || '';
   document.getElementById('autoApprove').checked = settings.auto_approve === 'true';
   document.getElementById('trackingParams').value = settings.tracking_params || '';
+  document.getElementById('aiProvider').value = settings.ai_provider || 'openai';
+  refreshModelOptions();
+  if (settings.ai_model) document.getElementById('aiModel').value = settings.ai_model;
+  document.getElementById('aiSafeMode').checked = settings.ai_safe_mode === 'true';
 
   const paused = settings.system_paused === 'true';
   document.getElementById('emergencyPauseBanner').classList.toggle('hidden', !paused);
@@ -706,6 +952,23 @@ async function saveApiKey(siteId) {
   loadSettings();
 }
 
+function refreshModelOptions() {
+  const provider = document.getElementById('aiProvider').value || 'openai';
+  const oai = document.getElementById('optgroupOpenAI');
+  const cla = document.getElementById('optgroupClaude');
+  const sel = document.getElementById('aiModel');
+  if (provider === 'openai') {
+    oai.style.display = '';
+    cla.style.display = 'none';
+    if (sel.selectedOptions[0]?.parentElement !== oai) sel.value = 'gpt-4o-mini';
+  } else {
+    oai.style.display = 'none';
+    cla.style.display = '';
+    if (sel.selectedOptions[0]?.parentElement !== cla) sel.value = 'claude-haiku-4-5';
+  }
+}
+document.getElementById('aiProvider')?.addEventListener('change', refreshModelOptions);
+
 document.getElementById('emergencyPauseBtn').addEventListener('click', async () => {
   if (!confirm('PAUSAR todos os envios automáticos?\n\nNenhum push (regular ou welcome) será enviado até você retomar.')) return;
   await api.patch('/api/settings', { system_paused: 'true' });
@@ -726,6 +989,9 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
     public_base_url: document.getElementById('publicBaseUrl').value,
     auto_approve: document.getElementById('autoApprove').checked ? 'true' : 'false',
     tracking_params: document.getElementById('trackingParams').value || '',
+    ai_provider: document.getElementById('aiProvider').value || 'openai',
+    ai_model: document.getElementById('aiModel').value || '',
+    ai_safe_mode: document.getElementById('aiSafeMode').checked ? 'true' : 'false',
   };
   const r = await api.patch('/api/settings', body);
   if (r.error) return toast(r.error);
@@ -763,6 +1029,7 @@ document.getElementById('newUrlBtn').addEventListener('click', openNewUrlModal);
 document.getElementById('sendNowBtn').addEventListener('click', sendNow);
 document.getElementById('refreshCtrBtn').addEventListener('click', refreshCtr);
 document.getElementById('reportPeriod').addEventListener('change', loadInicio);
+document.getElementById('topCopiesMin')?.addEventListener('change', loadTopCopies);
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   await api.post('/api/auth/logout');
   window.location.href = '/login.html';
@@ -811,7 +1078,7 @@ async function renderWelcomeFlows(sites) {
                 <div class="flex-1 min-w-0">
                   <div class="text-sm font-medium text-zinc-900 dark:text-white truncate">${step.label}</div>
                   <div class="text-[11px] text-zinc-500 dark:text-zinc-500 mt-0.5">
-                    ⏱ ${step.delay_minutes} min após anterior · 🎨 ${step.template} · 🔗 ${step.landing_url.slice(0, 40)}${step.landing_url.length > 40 ? '…' : ''}
+                    ${step.language === 'en' ? '🇺🇸' : '🇧🇷'} · ⏱ ${step.delay_minutes} min após anterior · 🎨 ${step.template} · 🔗 ${step.landing_url.slice(0, 40)}${step.landing_url.length > 40 ? '…' : ''}
                   </div>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
@@ -855,7 +1122,7 @@ function openNewWelcomeStepModal(siteId) {
     <h3 class="text-xl font-bold text-zinc-900 dark:text-white mb-1">Novo passo de boas-vindas</h3>
     <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-5">Quando um novo inscrito chegar, esse push será enviado após o tempo definido</p>
     <form id="newWelcomeStepForm" class="space-y-4">
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-3 gap-3">
         <div>
           <label class="${labelCls}">Atraso (min após anterior)</label>
           <input name="delay_minutes" type="number" min="1" max="10080" value="5" class="${inputCls}"/>
@@ -864,6 +1131,13 @@ function openNewWelcomeStepModal(siteId) {
           <label class="${labelCls}">Modelo</label>
           <select name="template" required class="${inputCls}">
             ${TEMPLATE_KEYS.map(k => `<option value="${k}">${k}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="${labelCls}">Idioma</label>
+          <select name="language" required class="${inputCls}">
+            <option value="pt-BR">Português 🇧🇷</option>
+            <option value="en">English 🇺🇸</option>
           </select>
         </div>
       </div>
@@ -1008,6 +1282,11 @@ window.saveApiKey = saveApiKey;
 window.closeModal = closeModal;
 window.showInsights = showInsights;
 window.closeInsights = closeInsights;
+window.setExamplesFilter = setExamplesFilter;
+window.toggleExample = toggleExample;
+window.deleteExample = deleteExample;
+window.retryExampleOcr = retryExampleOcr;
+window.openTextExampleModal = openTextExampleModal;
 window.copySnippet = copySnippet;
 window.openNewSiteModal = openNewSiteModal;
 window.deleteSite = deleteSite;

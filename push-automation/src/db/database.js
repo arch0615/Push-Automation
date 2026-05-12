@@ -40,6 +40,7 @@ db.exec(`
     image_filename TEXT,
     variation INTEGER NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
+    language TEXT NOT NULL DEFAULT 'pt-BR',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (url_id) REFERENCES urls(id) ON DELETE CASCADE
   );
@@ -93,6 +94,7 @@ db.exec(`
     label TEXT NOT NULL,
     landing_url TEXT NOT NULL,
     enabled INTEGER NOT NULL DEFAULT 1,
+    language TEXT NOT NULL DEFAULT 'pt-BR',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE
   );
@@ -115,6 +117,18 @@ db.exec(`
     clicked_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS examples (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER,
+    image_filename TEXT NOT NULL,
+    title TEXT,
+    description TEXT,
+    label TEXT,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE SET NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_urls_site ON urls(site_id);
   CREATE INDEX IF NOT EXISTS idx_copies_url ON copies(url_id);
   CREATE INDEX IF NOT EXISTS idx_campaigns_copy ON campaigns(copy_id);
@@ -125,6 +139,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_welcome_sent_sub ON welcome_sent(subscriber_id);
   CREATE INDEX IF NOT EXISTS idx_welcome_sent_step ON welcome_sent(step_id);
   CREATE INDEX IF NOT EXISTS idx_welcome_clicks_step ON welcome_clicks(step_id);
+  CREATE INDEX IF NOT EXISTS idx_examples_site ON examples(site_id);
 `);
 
 const defaultSettings = {
@@ -137,6 +152,7 @@ const defaultSettings = {
   active_window_start: '08:00',
   active_window_end: '22:00',
   tracking_params: 'utm_source=push&utm_medium=notification',
+  ai_provider: 'openai',
 };
 const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
 for (const [k, v] of Object.entries(defaultSettings)) insertSetting.run(k, v);

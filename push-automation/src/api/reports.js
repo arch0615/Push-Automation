@@ -94,6 +94,35 @@ router.get('/export.csv', (req, res) => {
   res.send(lines.join('\n'));
 });
 
+router.get('/top-copies', (req, res) => {
+  const minImpressions = parseInt(req.query.min_impressions || '20', 10);
+  const limitPerSite = parseInt(req.query.limit || '5', 10);
+
+  const sites = db.prepare(`SELECT id, name, domain FROM sites ORDER BY id`).all();
+  const result = sites.map(site => {
+    const top = db.prepare(`
+      SELECT c.id, c.template, c.title, c.description, c.status,
+             SUM(cp.impressions) AS impressions,
+             SUM(cp.clicks) AS clicks,
+             CASE WHEN SUM(cp.impressions) > 0
+                  THEN (CAST(SUM(cp.clicks) AS REAL) / SUM(cp.impressions)) * 100
+                  ELSE 0 END AS ctr,
+             u.label AS url_label
+      FROM copies c
+      JOIN urls u ON u.id = c.url_id
+      JOIN campaigns cp ON cp.copy_id = c.id
+      WHERE u.site_id = ?
+      GROUP BY c.id
+      HAVING impressions >= ?
+      ORDER BY ctr DESC, impressions DESC
+      LIMIT ?
+    `).all(site.id, minImpressions, limitPerSite);
+    return { site_id: site.id, site_name: site.name, site_domain: site.domain, copies: top };
+  });
+
+  res.json(result);
+});
+
 router.post('/refresh-ctr', async (req, res) => {
   try {
     const results = await refreshRecent(100);

@@ -26,7 +26,7 @@ function isPayloadValid(p) {
 async function sendToSubscriber(subscriber, payload) {
   configure();
   if (!isPayloadValid(payload)) {
-    console.warn('[webpush] refusing to send empty payload to sub', subscriber.id);
+    console.warn('[webpush] refusing to send empty payload to sub', subscriber.id, 'title=', JSON.stringify(payload?.title), 'body=', JSON.stringify(payload?.body));
     return { ok: false, error: 'empty_payload' };
   }
   const sub = {

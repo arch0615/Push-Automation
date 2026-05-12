@@ -18,13 +18,13 @@ function listStepsForSite(siteId) {
 }
 
 function createStep(siteId, body) {
-  const { delay_minutes, template, label, landing_url, enabled } = body;
+  const { delay_minutes, template, label, landing_url, enabled, language } = body;
   if (!template || !label || !landing_url) throw new Error('template, label e landing_url são obrigatórios');
   const max = db.prepare('SELECT COALESCE(MAX(step_order), 0) AS m FROM welcome_steps WHERE site_id = ?').get(siteId).m;
   const r = db.prepare(`
-    INSERT INTO welcome_steps (site_id, step_order, delay_minutes, template, label, landing_url, enabled)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(siteId, max + 1, delay_minutes || 5, template, label, landing_url, enabled ? 1 : 0);
+    INSERT INTO welcome_steps (site_id, step_order, delay_minutes, template, label, landing_url, enabled, language)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(siteId, max + 1, delay_minutes || 5, template, label, landing_url, enabled ? 1 : 0, language || 'pt-BR');
   return db.prepare('SELECT * FROM welcome_steps WHERE id = ?').get(r.lastInsertRowid);
 }
 
@@ -37,10 +37,12 @@ function updateStep(stepId, body) {
         template = COALESCE(?, template),
         label = COALESCE(?, label),
         landing_url = COALESCE(?, landing_url),
-        enabled = COALESCE(?, enabled)
+        enabled = COALESCE(?, enabled),
+        language = COALESCE(?, language)
     WHERE id = ?
   `).run(body.delay_minutes, body.template, body.label, body.landing_url,
-         body.enabled === undefined ? null : (body.enabled ? 1 : 0), stepId);
+         body.enabled === undefined ? null : (body.enabled ? 1 : 0),
+         body.language, stepId);
   return db.prepare('SELECT * FROM welcome_steps WHERE id = ?').get(stepId);
 }
 
@@ -48,10 +50,17 @@ function deleteStep(stepId) {
   return db.prepare('DELETE FROM welcome_steps WHERE id = ?').run(stepId).changes;
 }
 
-async function sendStepToSubscriber(subscriber, step, site) {
-  const baseUrl = settings.get('public_base_url', 'https://pushudc.top');
-  const language = 'pt-BR';
+// Cache: step_id|day → array of { copy, imageFilename }
+// Stores N variations per step per day; rotates them across subscribers
+// so the same person doesn't see identical text twice and AI is called only
+// VARIATIONS_PER_DAY times per step per day instead of once per subscriber.
+const stepCopyCache = new Map();
+const VARIATIONS_PER_DAY = 5;
+const cacheRotation = new Map();
 
+async function buildOneVariation(step) {
+  const baseUrl = settings.get('public_base_url', 'https://pushudc.top');
+  const language = step.language || 'pt-BR';
   const copy = await generateCopy(step.landing_url, step.label, 'geral', step.template, language);
   let imageFilename = null;
   try {
@@ -67,6 +76,49 @@ async function sendStepToSubscriber(subscriber, step, site) {
       imageFilename = img.filename;
     }
   } catch (e) { /* image is optional */ }
+  return { copy, imageFilename, baseUrl, language };
+}
+
+async function getOrGenerateStepCopy(step) {
+  const day = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
+  const cacheKey = `${step.id}|${day}`;
+
+  let variations = stepCopyCache.get(cacheKey);
+  if (!variations) {
+    variations = [];
+    stepCopyCache.set(cacheKey, variations);
+  }
+
+  // Lazily fill the cache up to VARIATIONS_PER_DAY when first hit each day
+  if (variations.length < VARIATIONS_PER_DAY) {
+    try {
+      const v = await buildOneVariation(step);
+      variations.push(v);
+    } catch (e) {
+      // If generation fails and we already have at least one variation,
+      // fall back to existing — only throw if cache is empty
+      if (variations.length === 0) throw e;
+    }
+  }
+
+  // Round-robin pick to evenly distribute
+  const rotKey = `rot|${step.id}|${day}`;
+  const idx = (cacheRotation.get(rotKey) || 0) % variations.length;
+  cacheRotation.set(rotKey, idx + 1);
+
+  // Prune older days
+  if (stepCopyCache.size > 200) {
+    for (const k of stepCopyCache.keys()) {
+      const [, d] = k.split('|');
+      if (parseInt(d, 10) < day - 1) stepCopyCache.delete(k);
+    }
+  }
+
+  return variations[idx];
+}
+
+async function sendStepToSubscriber(subscriber, step, site) {
+  const { copy, imageFilename, baseUrl, language } = await getOrGenerateStepCopy(step);
 
   const iconUrl = imageFilename ? `${baseUrl}/images/generated/${imageFilename}` : null;
   const cta = getCta(step.template, language);
@@ -106,7 +158,7 @@ async function processDueWelcomes() {
   // (avoids retroactive bombing when steps are added long after subscribers joined).
   const dueRows = db.prepare(`
     SELECT s.id AS sub_id, s.endpoint, s.p256dh, s.auth, s.site_id, s.created_at,
-           ws.id AS step_id, ws.step_order, ws.delay_minutes, ws.template, ws.label, ws.landing_url,
+           ws.id AS step_id, ws.step_order, ws.delay_minutes, ws.template, ws.label, ws.landing_url, ws.language AS step_language,
            datetime(s.created_at, '+' || (
              SELECT COALESCE(SUM(delay_minutes), 0)
              FROM welcome_steps
@@ -144,7 +196,7 @@ async function processDueWelcomes() {
   let sent = 0, failed = 0;
   for (const row of oneStepPerSub) {
     const subscriber = { id: row.sub_id, endpoint: row.endpoint, p256dh: row.p256dh, auth: row.auth };
-    const step = { id: row.step_id, step_order: row.step_order, template: row.template, label: row.label, landing_url: row.landing_url };
+    const step = { id: row.step_id, step_order: row.step_order, template: row.template, label: row.label, landing_url: row.landing_url, language: row.step_language || 'pt-BR' };
     const site = db.prepare('SELECT * FROM sites WHERE id = ?').get(row.site_id);
     try {
       await sendStepToSubscriber(subscriber, step, site);

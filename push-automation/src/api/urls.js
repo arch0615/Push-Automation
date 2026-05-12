@@ -145,11 +145,12 @@ router.post('/:id/generate', async (req, res) => {
 
   try {
     const count = req.body?.count || 3;
-    const variations = await generateVariations(url.url, url.label, url.niche, count, url.id, url.language || 'pt-BR');
+    const lang = url.language || 'pt-BR';
+    const variations = await generateVariations(url.url, url.label, url.niche, count, url.id, lang);
 
     const insert = db.prepare(`
-      INSERT INTO copies (url_id, template, title, description, image_filename, variation)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO copies (url_id, template, title, description, image_filename, variation, language)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
     const saved = [];
@@ -162,7 +163,7 @@ router.post('/:id/generate', async (req, res) => {
       } catch (imgErr) {
         console.error(`Image compose failed for ${v.template}:`, imgErr.message);
       }
-      const r = insert.run(url.id, v.template, v.title, v.description, imageFilename, i + 1);
+      const r = insert.run(url.id, v.template, v.title, v.description, imageFilename, i + 1, lang);
       saved.push({ id: r.lastInsertRowid, ...v, image_filename: imageFilename });
     }
 

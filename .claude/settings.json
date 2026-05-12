@@ -24,7 +24,21 @@
       "Bash(curl -sk -b /tmp/per.txt \"https://pushudc.top/api/reports/summary?period=today\")",
       "Bash(rm -f /tmp/per2.txt)",
       "Bash(curl -sk -c /tmp/per2.txt -X POST https://pushudc.top/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"admin\",\"password\":\"admin123\"}')",
-      "Bash(curl -sk -b /tmp/per2.txt 'https://pushudc.top/api/reports/summary?period=today')"
+      "Bash(curl -sk -b /tmp/per2.txt 'https://pushudc.top/api/reports/summary?period=today')",
+      "Bash(git config *)",
+      "Bash(git remote *)",
+      "Bash(git push *)",
+      "Bash(grep -E \"\\\\.env$|info\\\\.txt$|credentials\")",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'Remove info.txt from tracking — contained sensitive credentials *)",
+      "Bash(curl -skL -o /dev/null -w \"HTTP %{http_code} | final URL: %{url_effective}\\\\n\" \"https://diariovagas.com/en/rec-roblox-ganhe-skins-e-robux-de-graca\")",
+      "Bash(curl -sk -o /dev/null -w \"    HTTP %{http_code}\\\\n\" -X POST https://pushudc.top/api/push/track-welcome-click/6)",
+      "Bash(curl -sk -o /dev/null -w \"    HTTP %{http_code}\\\\n\" -X POST https://pushudc.top/api/push/track-click/100006)",
+      "Bash(curl -sk -b /tmp/tc.txt \"https://pushudc.top/api/reports/top-copies?min_impressions=20&limit=3\")",
+      "Bash(rm -f /tmp/tc2.txt)",
+      "Bash(curl -sk -c /tmp/tc2.txt -X POST https://pushudc.top/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"admin\",\"password\":\"admin123\"}')",
+      "Bash(curl -sk -b /tmp/tc2.txt 'https://pushudc.top/api/reports/top-copies?min_impressions=20&limit=3')"
     ]
   }
 }
