@@ -6,6 +6,31 @@ const { processDueWelcomes } = require('../welcome/manager');
 const { autoPauseLosers } = require('../learning/copyLearning');
 const settings = require('../api/settings');
 
+// Zombie cleanup: a subscriber counts as zombie if they've been registered
+// for more than ZOMBIE_GRACE_DAYS AND their last confirmed delivery (from the
+// SW pingback) is either NULL or older than ZOMBIE_STALE_DAYS. Confirmed
+// deliveries reset the clock automatically, so any subscriber whose browser
+// still receives pushes will never get cleaned. Marks active=0 — the existing
+// active=0 filter in webpush.sendCampaign keeps them out of future sends.
+// We never DELETE rows; the dashboard can still surface historical CTR.
+const ZOMBIE_GRACE_DAYS = 30;
+const ZOMBIE_STALE_DAYS = 30;
+
+function runZombieCleanup() {
+  const stmt = db.prepare(`
+    UPDATE subscribers
+       SET active = 0
+     WHERE active = 1
+       AND created_at < datetime('now', ?)
+       AND (
+         last_delivery_confirmed_at IS NULL
+         OR last_delivery_confirmed_at < datetime('now', ?)
+       )
+  `);
+  const info = stmt.run(`-${ZOMBIE_GRACE_DAYS} days`, `-${ZOMBIE_STALE_DAYS} days`);
+  return { removed: info.changes ?? 0 };
+}
+
 const jobs = [];
 
 function parseTime(raw) {
@@ -102,7 +127,22 @@ function start() {
   jobs.push(welcomeJob);
   console.log(`[scheduler] Registered welcome flow every 5 minutes`);
 
+  // Daily zombie cleanup at 03:30 local — quiet hour, after midnight rollover,
+  // before any morning send cycle. Only removes subscribers we have STRONG
+  // evidence aren't receiving pushes (>30d old, never confirmed or >30d stale).
+  const cleanupJob = cron.schedule('30 3 * * *', () => {
+    try {
+      const r = runZombieCleanup();
+      if (r.removed > 0) console.log(`[zombie-cleanup] marked ${r.removed} subscriber(s) inactive`);
+    } catch (e) {
+      console.error('[zombie-cleanup] failed:', e.message);
+    }
+  }, { timezone: tz });
+  jobs.push(cleanupJob);
+  info.zombie_cleanup = `daily 03:30 (grace=${ZOMBIE_GRACE_DAYS}d, stale=${ZOMBIE_STALE_DAYS}d)`;
+  console.log(`[scheduler] Zombie cleanup registered for 03:30 daily`);
+
   return info;
 }
 
-module.exports = { start, stopAll };
+module.exports = { start, stopAll, runZombieCleanup };

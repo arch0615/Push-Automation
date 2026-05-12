@@ -297,9 +297,10 @@
                     <th class="text-left px-6 py-4">Campanha</th>
                     <th class="text-left px-6 py-4">Modelo</th>
                     <th class="text-left px-6 py-4">Var.</th>
-                    <th class="text-right px-6 py-4">Envios</th>
+                    <th class="text-right px-6 py-4" title="Aceitas pelo serviço de push (Apple/Google/Mozilla). NÃO significa que o usuário recebeu — só que o servidor aceitou.">Envios</th>
+                    <th class="text-right px-6 py-4" title="Confirmadas pelo service worker do navegador. Esse é o número real de pushes que chegaram no aparelho.">Entregues</th>
                     <th class="text-right px-6 py-4">Cliques</th>
-                    <th class="text-right px-6 py-4">CTR</th>
+                    <th class="text-right px-6 py-4" title="CTR real = Cliques / Entregues. Mais honesto que CTR sobre Envios.">CTR real</th>
                   </tr>
                 </thead>
                 <tbody id="campaignsTable"></tbody>

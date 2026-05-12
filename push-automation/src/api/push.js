@@ -163,4 +163,39 @@ router.get('/click/:campaignId', (req, res) => {
   res.redirect(302, target);
 });
 
+// Service worker pingback: fired from sw.js on every `push` event the browser
+// actually delivers, so we can distinguish "push service accepted the payload"
+// (impressions) from "the browser truly received it" (delivered_count).
+// Idempotent and intentionally permissive — public CORS, fire-and-forget from
+// the SW with keepalive:true. Spoofing only inflates a counter; no auth needed.
+router.post('/delivery-confirm', (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  try {
+    const cid = parseInt(req.body?.cid ?? req.query?.cid ?? '0', 10);
+    const sid = parseInt(req.body?.sid ?? req.query?.sid ?? '0', 10);
+    if (!cid || !sid) return res.status(400).json({ error: 'cid and sid required' });
+
+    const campaign = db.prepare('SELECT id FROM campaigns WHERE id = ?').get(cid);
+    const subscriber = db.prepare('SELECT id FROM subscribers WHERE id = ?').get(sid);
+    if (!campaign || !subscriber) {
+      // Don't 404 — the SW shouldn't retry; just acknowledge politely.
+      return res.status(204).end();
+    }
+
+    db.prepare('UPDATE campaigns SET delivered_count = delivered_count + 1 WHERE id = ?').run(cid);
+    db.prepare('UPDATE subscribers SET last_delivery_confirmed_at = CURRENT_TIMESTAMP, last_seen = CURRENT_TIMESTAMP WHERE id = ?').run(sid);
+    res.status(204).end();
+  } catch (e) {
+    console.error('delivery-confirm failed:', e.message);
+    res.status(204).end(); // never propagate to the SW
+  }
+});
+
+router.options('/delivery-confirm', (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  res.sendStatus(204);
+});
+
 module.exports = router;

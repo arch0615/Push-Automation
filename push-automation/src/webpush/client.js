@@ -29,12 +29,17 @@ async function sendToSubscriber(subscriber, payload) {
     console.warn('[webpush] refusing to send empty payload to sub', subscriber.id, 'title=', JSON.stringify(payload?.title), 'body=', JSON.stringify(payload?.body));
     return { ok: false, error: 'empty_payload' };
   }
+  // Embed the subscriber id per push so the service-worker pingback at
+  // /api/push/delivery-confirm can attribute the delivery back to a row.
+  // The push payload is encrypted to this subscriber's keys, so the id never
+  // leaks to anyone else.
+  const personalPayload = { ...payload, _sid: subscriber.id };
   const sub = {
     endpoint: subscriber.endpoint,
     keys: { p256dh: subscriber.p256dh, auth: subscriber.auth },
   };
   try {
-    await webpush.sendNotification(sub, JSON.stringify(payload), { TTL: 3600 });
+    await webpush.sendNotification(sub, JSON.stringify(personalPayload), { TTL: 3600 });
     return { ok: true };
   } catch (e) {
     if (PERMANENTLY_DEAD_CODES.has(e.statusCode)) {

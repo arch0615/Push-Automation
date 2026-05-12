@@ -11,7 +11,9 @@ function isSystemPaused() {
 
 router.get('/', (req, res) => {
   const rows = db.prepare(`
-    SELECT c.id, c.izooto_campaign_id, c.sent_at, c.impressions, c.clicks, c.ctr,
+    SELECT c.id, c.izooto_campaign_id, c.sent_at,
+           c.impressions, c.delivered_count, c.expired_count, c.failed,
+           c.clicks, c.ctr,
            p.title, p.description, p.template, p.variation,
            u.url, u.label, u.niche,
            s.id AS site_id, s.name AS site_name, s.domain AS site_domain

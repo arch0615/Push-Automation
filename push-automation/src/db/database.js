@@ -142,6 +142,26 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_examples_site ON examples(site_id);
 `);
 
+// Idempotent column additions — SQLite has no `ADD COLUMN IF NOT EXISTS` prior
+// to 3.35, and we want this file to survive being re-run safely.
+function ensureColumn(table, name, ddl) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
+  if (!cols.includes(name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${ddl}`);
+}
+
+// Delivery rate columns. `impressions` keeps its existing meaning ("push
+// service accepted the payload"); `delivered_count` is the new "service worker
+// confirmed the browser actually received it" signal driven by /api/push/
+// delivery-confirm. `expired_count` is split out of `failed` so we can show
+// list health separately from transient failures.
+ensureColumn('campaigns', 'delivered_count', 'INTEGER NOT NULL DEFAULT 0');
+ensureColumn('campaigns', 'expired_count',   'INTEGER NOT NULL DEFAULT 0');
+
+// Per-subscriber delivery confirmation timestamp, driven by the SW pingback.
+// Used by the daily zombie cleanup: subscribed >30d ago AND never confirmed a
+// delivery (or last confirmation older than 30d) = mark inactive.
+ensureColumn('subscribers', 'last_delivery_confirmed_at', 'DATETIME');
+
 const defaultSettings = {
   send_times: '08:00,12:00,18:00',
   timezone: 'America/Sao_Paulo',

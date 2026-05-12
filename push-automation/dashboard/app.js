@@ -577,14 +577,41 @@ async function loadCampaigns() {
       </td>
       <td class="px-6 py-4 text-zinc-600 dark:text-zinc-400 text-xs font-mono">v${c.variation}</td>
       <td class="px-6 py-4 text-right text-zinc-700 dark:text-zinc-300 text-sm font-mono">${(c.impressions || 0).toLocaleString('pt-BR')}</td>
+      <td class="px-6 py-4 text-right text-sm font-mono">
+        ${(() => {
+          const sent = c.impressions || 0;
+          const delivered = c.delivered_count || 0;
+          const deliveryPct = sent > 0 ? (delivered / sent) * 100 : 0;
+          // Color the delivered cell by health: >=80% green, 50-80% amber, <50% red.
+          // Helps Julio spot bad delivery rates at a glance (typical zombie sites
+          // collect 201s from the push service but the user never actually receives).
+          const dCls = deliveryPct >= 80 ? 'text-emerald-600 dark:text-emerald-400'
+                     : deliveryPct >= 50 ? 'text-amber-600 dark:text-amber-400'
+                     : 'text-red-600 dark:text-red-400';
+          const deliveryLabel = sent > 0 ? `${deliveryPct.toFixed(0)}%` : '—';
+          return `<span class="${dCls} font-bold">${delivered.toLocaleString('pt-BR')}</span>
+                  <div class="text-[10px] text-zinc-400 dark:text-zinc-500">${deliveryLabel}</div>`;
+        })()}
+      </td>
       <td class="px-6 py-4 text-right text-zinc-700 dark:text-zinc-300 text-sm font-mono">${(c.clicks || 0).toLocaleString('pt-BR')}</td>
       <td class="px-6 py-4 text-right">
-        <span class="text-sm font-bold ${(c.ctr || 0) > 5 ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-700 dark:text-zinc-300'} font-mono">${pct(c.ctr)}</span>
+        ${(() => {
+          // Real CTR = clicks / delivered (true engagement on pushes that
+          // actually arrived). Falls back to the legacy CTR (clicks /
+          // impressions, populated by iZooto stats or the cron poller) when
+          // no service-worker confirmations have arrived yet.
+          const delivered = c.delivered_count || 0;
+          const clicks = c.clicks || 0;
+          const realCtr = delivered > 0 ? (clicks / delivered) * 100 : (c.ctr || 0);
+          const cls = realCtr > 5 ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-zinc-700 dark:text-zinc-300';
+          return `<span class="text-sm font-bold ${cls} font-mono">${pct(realCtr)}</span>`;
+        })()}
       </td>
     </tr>
   `).join('') || `
     <tr>
-      <td colspan="8" class="px-6 py-16">
+      <td colspan="9" class="px-6 py-16">
         <div class="text-center">
           <div class="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 mx-auto mb-3 flex items-center justify-center text-zinc-400">
             ${icons.send}

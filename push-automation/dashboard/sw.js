@@ -1,5 +1,21 @@
-var SW_VERSION = 'v4-2026-04-29';
+var SW_VERSION = 'v5-2026-05-12';
 var TRACKING_HOST = 'https://pushudc.top';
+
+// Fire a one-shot pingback to the server when a push event arrives, so the
+// dashboard can show true delivery rate (received-by-browser) instead of just
+// accepted-by-push-service. fire-and-forget; failures are intentionally
+// swallowed so they never block the notification render.
+function confirmDelivery(host, cid, sid) {
+  if (!cid || !sid) return Promise.resolve();
+  var url = (host || TRACKING_HOST) + '/api/push/delivery-confirm';
+  return fetch(url, {
+    method: 'POST',
+    mode: 'no-cors',
+    keepalive: true,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cid: cid, sid: sid }),
+  }).catch(function () {});
+}
 
 self.addEventListener('install', function (event) {
   self.skipWaiting();
@@ -55,7 +71,10 @@ self.addEventListener('push', function (event) {
     tag: data.tag || 'push-' + Date.now(),
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(Promise.all([
+    self.registration.showNotification(title, options),
+    confirmDelivery(data.trackingHost, data.campaignId, data._sid),
+  ]));
 });
 
 self.addEventListener('notificationclick', function (event) {

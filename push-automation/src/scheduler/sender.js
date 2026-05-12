@@ -116,8 +116,19 @@ async function sendOneForUrl(url) {
       cta,
     });
     impressions = result.sent || 0;
-    db.prepare('UPDATE campaigns SET izooto_campaign_id = ?, impressions = ?, failed = ? WHERE id = ?')
-      .run(result.izooto_campaign_id, impressions, (result.failed || 0) + (result.expired || 0), campaignId);
+    // impressions = accepted by push service ("sent_201"); delivered_count is
+    // populated asynchronously by the SW pingback as users actually receive
+    // the push. Splitting failed/expired lets the dashboard distinguish
+    // "transient failure (retry next time)" from "dead endpoint (was cleaned
+    // up at send time)". Total failures stays in `failed` for backward compat.
+    db.prepare('UPDATE campaigns SET izooto_campaign_id = ?, impressions = ?, failed = ?, expired_count = ? WHERE id = ?')
+      .run(
+        result.izooto_campaign_id,
+        impressions,
+        (result.failed || 0) + (result.expired || 0),
+        result.expired || 0,
+        campaignId,
+      );
     db.prepare(`UPDATE copies SET status = 'sent' WHERE id = ?`).run(copy.id);
     return {
       sent: true,
