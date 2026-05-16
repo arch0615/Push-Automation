@@ -1,19 +1,26 @@
-var SW_VERSION = 'v5-2026-05-12';
+var SW_VERSION = 'v6-2026-05-16';
 var TRACKING_HOST = 'https://pushudc.top';
 
 // Fire a one-shot pingback to the server when a push event arrives, so the
 // dashboard can show true delivery rate (received-by-browser) instead of just
-// accepted-by-push-service. fire-and-forget; failures are intentionally
-// swallowed so they never block the notification render.
+// accepted-by-push-service. fire-and-forget; failures swallowed so they
+// never block the notification render.
+//
+// Important: we pass cid/sid via QUERY STRING (not JSON body). In mode:
+// 'no-cors' the browser strips non-safelisted Content-Type headers,
+// so 'application/json' was silently dropped and Express received the body
+// as text/plain — req.body was always undefined, the endpoint returned 400,
+// and zero deliveries were recorded. This is the same pattern the existing
+// click-tracking endpoint already uses successfully (campaignId in URL path).
 function confirmDelivery(host, cid, sid) {
   if (!cid || !sid) return Promise.resolve();
-  var url = (host || TRACKING_HOST) + '/api/push/delivery-confirm';
+  var url = (host || TRACKING_HOST) + '/api/push/delivery-confirm'
+    + '?cid=' + encodeURIComponent(String(cid))
+    + '&sid=' + encodeURIComponent(String(sid));
   return fetch(url, {
     method: 'POST',
     mode: 'no-cors',
     keepalive: true,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cid: cid, sid: sid }),
   }).catch(function () {});
 }
 
