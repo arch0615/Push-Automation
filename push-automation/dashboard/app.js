@@ -298,8 +298,9 @@ async function loadUrls() {
         </div>
       </td>
       <td class="px-6 py-4">
-        <div class="font-medium text-zinc-900 dark:text-white text-sm truncate max-w-[280px]">${u.label}</div>
-        <div class="text-xs text-zinc-500 dark:text-zinc-500 truncate max-w-[280px] font-mono">${u.url}</div>
+        <div class="font-medium text-zinc-900 dark:text-white text-sm truncate max-w-[420px]" title="${u.label}">${u.label}</div>
+        <a href="${u.url}" target="_blank" rel="noopener noreferrer" title="${u.url}"
+           class="text-xs text-zinc-500 dark:text-zinc-500 font-mono break-all hover:text-violet-600 dark:hover:text-violet-400 hover:underline">${u.url}</a>
       </td>
       <td class="px-6 py-4">
         <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-medium">${u.niche}</span>
