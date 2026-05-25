@@ -97,6 +97,18 @@ router.get('/:id', (req, res) => {
   res.json({ ...url, copies });
 });
 
+// 'HH:MM' (00:00 - 23:59) or empty/null
+function normalizeWindowField(value) {
+  if (value === undefined) return undefined; // not touched
+  if (value === null || value === '') return null;
+  const m = String(value).match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return undefined; // ignore garbage rather than 400; treat like "not provided"
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h < 0 || h > 23 || min < 0 || min > 59) return undefined;
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
 router.post('/', (req, res) => {
   const { site_id, url, label, niche, daily_limit, language } = req.body;
   if (!site_id || !url || !label || !niche) {
@@ -105,10 +117,22 @@ router.post('/', (req, res) => {
   const site = db.prepare('SELECT id FROM sites WHERE id = ?').get(site_id);
   if (!site) return res.status(400).json({ error: 'Invalid site_id' });
 
+  const winStart = normalizeWindowField(req.body.active_window_start);
+  const winEnd = normalizeWindowField(req.body.active_window_end);
+
   const result = db.prepare(`
-    INSERT INTO urls (site_id, url, label, niche, daily_limit, language)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(site_id, url, label, niche, daily_limit || 3, language || 'pt-BR');
+    INSERT INTO urls (site_id, url, label, niche, daily_limit, language, active_window_start, active_window_end)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    site_id,
+    url,
+    label,
+    niche,
+    daily_limit || 3,
+    language || 'pt-BR',
+    winStart === undefined ? null : winStart,
+    winEnd === undefined ? null : winEnd,
+  );
 
   const created = db.prepare('SELECT * FROM urls WHERE id = ?').get(result.lastInsertRowid);
   res.status(201).json(created);
@@ -119,15 +143,35 @@ router.patch('/:id', (req, res) => {
   const url = db.prepare('SELECT * FROM urls WHERE id = ?').get(req.params.id);
   if (!url) return res.status(404).json({ error: 'URL not found' });
 
+  // Window fields: undefined means "leave as-is", null/'' means "clear it",
+  // 'HH:MM' means "set". Pre-normalize so the SQL stays single-statement.
+  const hasStart = 'active_window_start' in req.body;
+  const hasEnd = 'active_window_end' in req.body;
+  const winStart = hasStart ? normalizeWindowField(req.body.active_window_start) : undefined;
+  const winEnd = hasEnd ? normalizeWindowField(req.body.active_window_end) : undefined;
+
   db.prepare(`
     UPDATE urls
     SET status = COALESCE(?, status),
         daily_limit = COALESCE(?, daily_limit),
         label = COALESCE(?, label),
         niche = COALESCE(?, niche),
-        language = COALESCE(?, language)
+        language = COALESCE(?, language),
+        active_window_start = CASE WHEN ? = 1 THEN ? ELSE active_window_start END,
+        active_window_end   = CASE WHEN ? = 1 THEN ? ELSE active_window_end   END
     WHERE id = ?
-  `).run(status, daily_limit, label, niche, language, req.params.id);
+  `).run(
+    status,
+    daily_limit,
+    label,
+    niche,
+    language,
+    hasStart ? 1 : 0,
+    hasStart ? (winStart === undefined ? null : winStart) : null,
+    hasEnd ? 1 : 0,
+    hasEnd ? (winEnd === undefined ? null : winEnd) : null,
+    req.params.id,
+  );
 
   const updated = db.prepare('SELECT * FROM urls WHERE id = ?').get(req.params.id);
   res.json(updated);

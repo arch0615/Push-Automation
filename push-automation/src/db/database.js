@@ -5,6 +5,22 @@ const db = new Database(path.join(__dirname, '../../data.db'));
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
+// Idempotent column migrations for tables that pre-date them. SQLite's
+// CREATE TABLE IF NOT EXISTS won't add columns to existing tables, so
+// each new column goes through this helper.
+function addColumnIfMissing(table, column, type) {
+  const exists = db.prepare(`PRAGMA table_info(${table})`).all().some((r) => r.name === column);
+  if (!exists) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+}
+try {
+  // Per-URL active window. Optional — when NULL the site's window
+  // applies. Stored as 'HH:MM' strings to mirror sites.active_window_*.
+  addColumnIfMissing('urls', 'active_window_start', 'TEXT');
+  addColumnIfMissing('urls', 'active_window_end', 'TEXT');
+} catch (err) {
+  if (!String(err.message).includes('no such table')) throw err;
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS sites (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

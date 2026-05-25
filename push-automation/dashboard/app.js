@@ -392,6 +392,14 @@ function openNewUrlModal() {
           <input name="daily_limit" type="number" min="1" max="999" value="3" class="${inputCls}"/>
         </div>
       </div>
+      <div>
+        <label class="${labelCls}">Horário (opcional) — ex: 00:00 às 06:00 só de madrugada</label>
+        <div class="grid grid-cols-2 gap-3">
+          <input name="active_window_start" type="time" class="${inputCls}" placeholder="Início" title="Deixe vazio para usar a janela do site"/>
+          <input name="active_window_end" type="time" class="${inputCls}" placeholder="Fim" title="Deixe vazio para usar a janela do site"/>
+        </div>
+        <p class="text-xs text-zinc-500 dark:text-zinc-500 mt-1.5">Se ficar em branco, a URL usa o horário do site. Funciona inclusive virando a meia-noite (ex: 22:00 às 06:00).</p>
+      </div>
       <div class="flex gap-2 pt-3">
         <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2.5 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 transition">Cancelar</button>
         <button type="submit" class="flex-1 btn-primary text-white px-4 py-2.5 rounded-lg text-sm font-medium">Criar URL</button>
@@ -403,6 +411,9 @@ function openNewUrlModal() {
     const data = Object.fromEntries(new FormData(e.target));
     data.site_id = parseInt(data.site_id, 10);
     data.daily_limit = parseInt(data.daily_limit, 10);
+    // Empty time inputs come through as ""; let the API turn that into NULL.
+    if (data.active_window_start === '') data.active_window_start = null;
+    if (data.active_window_end === '') data.active_window_end = null;
     const r = await api.post('/api/urls', data);
     if (r.error) return toast(r.error);
     closeModal();
@@ -451,6 +462,14 @@ function editUrl(id) {
           <input name="daily_limit" type="number" min="1" max="999" value="${u.daily_limit}" class="${inputCls}"/>
         </div>
       </div>
+      <div>
+        <label class="${labelCls}">Horário (opcional)</label>
+        <div class="grid grid-cols-2 gap-3">
+          <input name="active_window_start" type="time" value="${u.active_window_start ?? ''}" class="${inputCls}"/>
+          <input name="active_window_end" type="time" value="${u.active_window_end ?? ''}" class="${inputCls}"/>
+        </div>
+        <p class="text-xs text-zinc-500 dark:text-zinc-500 mt-1.5">Vazio = usa a janela do site. Aceita virar a meia-noite (ex: 22:00 às 06:00).</p>
+      </div>
       <div class="flex gap-2 pt-3">
         <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2.5 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 transition">Cancelar</button>
         <button type="submit" class="flex-1 bg-gradient-to-br from-blue-500 to-violet-500 hover:shadow-lg hover:shadow-blue-500/30 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition">Salvar</button>
@@ -461,6 +480,9 @@ function editUrl(id) {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(e.target));
     data.daily_limit = parseInt(data.daily_limit, 10);
+    // Always send the window fields so PATCH can clear them when emptied.
+    if (data.active_window_start === '') data.active_window_start = null;
+    if (data.active_window_end === '') data.active_window_end = null;
     const r = await api.patch(`/api/urls/${id}`, data);
     if (r.error) return toast(r.error);
     closeModal();

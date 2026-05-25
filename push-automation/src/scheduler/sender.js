@@ -217,7 +217,22 @@ function pickNextUrlForSite(siteId) {
     WHERE u.status = 'ativa' AND u.site_id = ?
   `).all(siteId);
 
-  const eligible = urls.filter(u => u.sent_today < (u.daily_limit || 999));
+  // Per-URL active window — when set, the URL only ships within that window.
+  // When not set, the URL is bound only by the site's window (already checked
+  // by the caller). Lets Julio configure URLs that only send "de madrugada".
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const eligible = urls.filter((u) => {
+    if (u.sent_today >= (u.daily_limit || 999)) return false;
+    if (!u.active_window_start || !u.active_window_end) return true;
+    const startMin = parseHHMM(u.active_window_start);
+    const endMin = parseHHMM(u.active_window_end);
+    if (startMin == null || endMin == null) return true;
+    // Standard range (e.g. 09:00..18:00). Cross-midnight ranges (e.g.
+    // 22:00..06:00) handled by allowing now >= start OR now <= end.
+    if (startMin <= endMin) return nowMin >= startMin && nowMin <= endMin;
+    return nowMin >= startMin || nowMin <= endMin;
+  });
   if (eligible.length === 0) return null;
 
   eligible.sort((a, b) => {
