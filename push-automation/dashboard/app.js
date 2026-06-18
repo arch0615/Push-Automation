@@ -99,34 +99,102 @@ function statCard({ label, value, icon, gradient, sub }) {
 
 async function loadInicio() {
   const period = document.getElementById('reportPeriod')?.value || 'week';
-  const [sites, urls, summary] = await Promise.all([
+  // Map the period selector to a window the subscribers-daily endpoint
+  // understands. The cards + the sidebar site list both respect this
+  // window — every number on the page now responds to the dropdown.
+  const periodDays = { today: 1, yesterday: 1, week: 7, month: 30 }[period] || 7;
+  const periodOffset = period === 'yesterday' ? 1 : 0;
+  // We always need 2 extra days for the dynamic label calculations so we
+  // pull enough history to cover the chosen window plus the offset.
+  const subsDays = periodDays + periodOffset + 1;
+
+  const [sites, urls, summary, newSubs] = await Promise.all([
     api.get('/api/urls/sites'),
     api.get('/api/urls'),
     api.get(`/api/reports/summary?period=${period}`),
+    api.get(`/api/reports/subscribers-daily?days=${subsDays}`),
   ]);
 
   const activeUrls = urls.filter(u => u.status === 'ativa').length;
   const t = summary.totals || {};
 
   const totalSubs = sites.reduce((s, x) => s + (x.subscribers || 0), 0);
+
+  // newSubs.totals_per_day ordered newest-first: index 0=today, 1=yesterday.
+  // Slice the right window for the selected period.
+  const totalsArr = newSubs?.totals_per_day ?? [];
+  const periodSlice = totalsArr.slice(periodOffset, periodOffset + periodDays);
+  const periodNew = periodSlice.reduce((a, b) => a + b, 0);
+  const periodLabel = ({
+    today: 'Inscritos hoje',
+    yesterday: 'Inscritos ontem',
+    week: 'Inscritos (7 dias)',
+    month: 'Inscritos (30 dias)',
+  })[period] || 'Inscritos no período';
+
+  // Snapshot cards: today + yesterday stay always visible as constant
+  // reference (useful for sanity-check even when the period selector is
+  // on "Últimos N dias").
+  const todayNew = totalsArr[0] ?? 0;
+  const yesterdayNew = totalsArr[1] ?? 0;
+  const usersIconSvg = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>';
+  const userPlusIcon = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>';
+
+  // Period card label varies but is the SAME visual style — gradient pink
+  // when matches "hoje", indigo for any other. Keeps the "this changed
+  // when I clicked Ontem" signal obvious to the operator.
+  const periodGradient = period === 'today' ? 'from-pink-500 to-rose-500' : 'from-indigo-500 to-purple-500';
+
   document.getElementById('summaryCards').innerHTML = [
-    statCard({ label: 'Inscritos totais', value: totalSubs.toLocaleString('pt-BR'), icon: '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>', gradient: 'from-violet-500 to-fuchsia-500', sub: `${sites.length} sites` }),
+    statCard({ label: 'Inscritos totais', value: totalSubs.toLocaleString('pt-BR'), icon: usersIconSvg, gradient: 'from-violet-500 to-fuchsia-500', sub: `${sites.length} sites` }),
+    statCard({ label: periodLabel, value: periodNew.toLocaleString('pt-BR'), icon: userPlusIcon, gradient: periodGradient, sub: 'novos cadastros' }),
     statCard({ label: 'URLs ativas', value: activeUrls, icon: icons.active, gradient: 'from-emerald-500 to-teal-500', sub: `de ${urls.length}` }),
     statCard({ label: ({today:'Pushes hoje',yesterday:'Pushes ontem',week:'Pushes (7 dias)',month:'Pushes (30 dias)'}[period] || 'Pushes no período'), value: t.sent || 0, icon: icons.send, gradient: 'from-orange-500 to-amber-500' }),
     statCard({ label: 'CTR médio', value: pct(t.ctr || 0), icon: icons.chart, gradient: 'from-blue-500 to-cyan-500' }),
   ].join('');
 
   document.getElementById('sitesCount').textContent = `${sites.length} ${sites.length === 1 ? 'site' : 'sites'}`;
-  document.getElementById('sitesList').innerHTML = sites.map(s => `
-    <div class="flex items-center justify-between p-3 rounded-xl bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700 transition">
-      <div class="min-w-0 flex-1">
-        <div class="font-medium text-zinc-900 dark:text-white text-sm truncate">${s.domain}</div>
-        <div class="text-[11px] text-zinc-500 dark:text-zinc-500 mt-0.5 flex items-center gap-2">
-          <span class="font-semibold text-violet-600 dark:text-violet-400">${(s.subscribers || 0).toLocaleString('pt-BR')} inscritos</span>
-        </div>
+
+  // Per-site new-subscriber deltas for the SELECTED period. The legacy
+  // "hoje +X · ontem +Y" badges shown a hardcoded snapshot regardless of
+  // the dropdown — Julio called that out on 05/06. Now we sum the
+  // period's window per site and surface a single delta that tracks the
+  // selector.
+  const periodBySite = new Map(
+    (newSubs?.sites || []).map((s) => {
+      const slice = (s.per_day || []).slice(periodOffset, periodOffset + periodDays);
+      return [s.domain, slice.reduce((a, b) => a + b, 0)];
+    }),
+  );
+  const periodLabelShort = ({
+    today: 'hoje',
+    yesterday: 'ontem',
+    week: '7 dias',
+    month: '30 dias',
+  })[period] || 'período';
+  // Pre-built class strings — Tailwind JIT-CDN scans the DOM but explicit
+  // strings are still safer than dynamic interpolation across `${color}`.
+  const periodBadgeClasses = period === 'today'
+    ? { dot: 'bg-pink-500', text: 'text-pink-600 dark:text-pink-400' }
+    : { dot: 'bg-indigo-500', text: 'text-indigo-600 dark:text-indigo-400' };
+
+  document.getElementById('sitesList').innerHTML = sites.map(s => {
+    const periodNewSite = periodBySite.get(s.domain) ?? 0;
+    return `
+    <div class="p-3 rounded-xl bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700 transition">
+      <div class="font-medium text-zinc-900 dark:text-white text-sm truncate">${s.domain}</div>
+      <div class="text-[11px] text-zinc-500 dark:text-zinc-500 mt-0.5">
+        <span class="font-semibold text-violet-600 dark:text-violet-400">${(s.subscribers || 0).toLocaleString('pt-BR')} inscritos totais</span>
+      </div>
+      <div class="mt-2 flex items-center gap-3 text-[11px]">
+        <span class="inline-flex items-center gap-1">
+          <span class="h-1.5 w-1.5 rounded-full ${periodBadgeClasses.dot}"></span>
+          <span class="text-zinc-500 dark:text-zinc-500">${periodLabelShort}</span>
+          <span class="font-semibold ${periodBadgeClasses.text} tabular-nums">+${periodNewSite.toLocaleString('pt-BR')}</span>
+        </span>
       </div>
     </div>
-  `).join('') || `<div class="text-center py-6 text-sm text-zinc-400 dark:text-zinc-500">Nenhum site conectado</div>`;
+  `;}).join('') || `<div class="text-center py-6 text-sm text-zinc-400 dark:text-zinc-500">Nenhum site conectado</div>`;
 
   renderChart(summary.daily || []);
 
@@ -135,11 +203,125 @@ async function loadInicio() {
   document.getElementById('exportCsvBtn').href = `/api/reports/export.csv?days=${days}`;
 
   loadTopCopies();
+  loadNewSubs();
+  loadLifetime();
+}
+
+async function loadLifetime() {
+  const target = document.getElementById('lifetimeTable');
+  if (!target) return;
+  let data;
+  try {
+    data = await api.get('/api/reports/subscriber-lifetime');
+  } catch (e) {
+    target.innerHTML = `<div class="text-xs text-zinc-400 py-6 text-center">erro ao carregar</div>`;
+    return;
+  }
+  const sites = data.sites || [];
+  if (sites.length === 0) {
+    target.innerHTML = `<div class="text-xs text-zinc-400 py-6 text-center">sem dados</div>`;
+    return;
+  }
+
+  // Render a comparison: zombies cohort (already left) and actives cohort
+  // (still here). The "avg days zombies" is the headline retention KPI —
+  // higher = stickier audience.
+  const rows = sites.map((s) => {
+    const ratio = s.actives + s.zombies > 0 ? (s.actives / (s.actives + s.zombies)) * 100 : 0;
+    const retentionColor = s.avg_zombie_days >= 3 ? 'text-emerald-600 dark:text-emerald-400'
+                          : s.avg_zombie_days >= 2 ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-rose-600 dark:text-rose-400';
+    return `<tr class="border-t border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-950/50">
+      <td class="px-3 py-2.5 font-medium text-zinc-900 dark:text-zinc-100 whitespace-nowrap">${s.domain}</td>
+      <td class="px-3 py-2.5 text-right font-mono tabular-nums font-bold ${retentionColor}">${s.avg_zombie_days.toFixed(1)}</td>
+      <td class="px-3 py-2.5 text-right font-mono tabular-nums text-zinc-500 dark:text-zinc-400">${s.zombies.toLocaleString('pt-BR')}</td>
+      <td class="px-3 py-2.5 text-right font-mono tabular-nums text-zinc-700 dark:text-zinc-300">${s.avg_active_days.toFixed(1)}</td>
+      <td class="px-3 py-2.5 text-right font-mono tabular-nums text-zinc-500 dark:text-zinc-400">${s.actives.toLocaleString('pt-BR')}</td>
+      <td class="px-3 py-2.5 text-right font-mono tabular-nums">
+        <span class="px-2 py-0.5 rounded-md bg-violet-100/60 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 font-semibold">${ratio.toFixed(1)}%</span>
+      </td>
+    </tr>`;
+  }).join('');
+
+  target.innerHTML = `
+    <table class="w-full text-xs">
+      <thead class="bg-zinc-50/60 dark:bg-zinc-950/40 text-[10px] uppercase tracking-wider">
+        <tr>
+          <th class="px-3 py-2 text-left font-semibold text-zinc-500 dark:text-zinc-400">Site</th>
+          <th class="px-3 py-2 text-right font-semibold text-zinc-500 dark:text-zinc-400" title="Tempo médio que um inscrito ficou na lista antes de virar zombie">Vida média zombies (dias)</th>
+          <th class="px-3 py-2 text-right font-semibold text-zinc-500 dark:text-zinc-400">Total zombies</th>
+          <th class="px-3 py-2 text-right font-semibold text-zinc-500 dark:text-zinc-400" title="Idade média dos inscritos que ainda estão ativos">Idade média ativos (dias)</th>
+          <th class="px-3 py-2 text-right font-semibold text-zinc-500 dark:text-zinc-400">Total ativos</th>
+          <th class="px-3 py-2 text-right font-semibold text-zinc-500 dark:text-zinc-400" title="% dos inscritos cadastrados que ainda estão ativos">Taxa de retenção</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="text-[10px] text-zinc-400 dark:text-zinc-500 mt-3 px-2">
+      Cores na "Vida média zombies": verde ≥ 3 dias, amarelo 2-3 dias, vermelho &lt; 2 dias
+    </div>`;
+}
+
+async function loadNewSubs() {
+  // The bottom table has its own day-count selector (7/14/30) because the
+  // operator may want a wider window than the headline filter. We honour
+  // it as the primary source; if it's missing, fall back to the main
+  // period selector's implied window.
+  const ownSel = document.getElementById('newSubsDays')?.value;
+  const mainPeriod = document.getElementById('reportPeriod')?.value;
+  const mainDays = { today: 1, yesterday: 2, week: 7, month: 30 }[mainPeriod];
+  const days = ownSel || String(mainDays || 14);
+  let data;
+  try {
+    data = await api.get(`/api/reports/subscribers-daily?days=${days}`);
+  } catch (e) {
+    document.getElementById('newSubsTable').innerHTML = `<div class="text-xs text-zinc-400 py-6 text-center">erro ao carregar</div>`;
+    return;
+  }
+  const { dates, sites, totals_per_day, grand_total } = data;
+  // Truncate dates to dd/MM for compact header
+  const headerCells = dates.map((d) => {
+    const [y, m, day] = d.split('-');
+    return `<th class="px-2 py-2 text-right font-medium text-zinc-500 dark:text-zinc-400 tabular-nums whitespace-nowrap">${day}/${m}</th>`;
+  }).join('');
+
+  const formatNum = (n) => n > 0 ? n.toLocaleString('pt-BR') : '<span class="text-zinc-300 dark:text-zinc-600">—</span>';
+  const rows = sites.map((s) => {
+    const cells = s.per_day.map((n) => `<td class="px-2 py-1.5 text-right font-mono tabular-nums">${formatNum(n)}</td>`).join('');
+    return `<tr class="border-t border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-950/50">
+      <td class="px-3 py-1.5 font-medium text-zinc-900 dark:text-zinc-100 whitespace-nowrap">${s.domain}</td>
+      ${cells}
+      <td class="px-3 py-1.5 text-right font-mono tabular-nums font-bold text-violet-600 dark:text-violet-400">${s.total.toLocaleString('pt-BR')}</td>
+    </tr>`;
+  }).join('');
+
+  const totalsCells = totals_per_day.map((n) =>
+    `<td class="px-2 py-2 text-right font-mono tabular-nums font-semibold">${formatNum(n)}</td>`).join('');
+
+  document.getElementById('newSubsTable').innerHTML = `
+    <table class="w-full text-xs">
+      <thead class="bg-zinc-50/60 dark:bg-zinc-950/40 text-[10px] uppercase tracking-wider">
+        <tr>
+          <th class="px-3 py-2 text-left font-semibold text-zinc-500 dark:text-zinc-400">Site</th>
+          ${headerCells}
+          <th class="px-3 py-2 text-right font-semibold text-zinc-500 dark:text-zinc-400 whitespace-nowrap">Total ${days}d</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot class="bg-zinc-50/60 dark:bg-zinc-950/40 border-t-2 border-zinc-200 dark:border-zinc-800">
+        <tr>
+          <td class="px-3 py-2 font-semibold text-zinc-700 dark:text-zinc-300 uppercase text-[10px] tracking-wider">Total/dia</td>
+          ${totalsCells}
+          <td class="px-3 py-2 text-right font-mono tabular-nums font-bold text-violet-700 dark:text-violet-300">${grand_total.toLocaleString('pt-BR')}</td>
+        </tr>
+      </tfoot>
+    </table>`;
 }
 
 function renderChart(daily) {
+  const target = document.getElementById('dailyChart');
   if (daily.length === 0) {
-    document.getElementById('dailyChart').innerHTML = `
+    target.innerHTML = `
       <div class="h-full flex items-center justify-center">
         <div class="text-center">
           <div class="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 mx-auto mb-2 flex items-center justify-center text-zinc-400">${icons.chart}</div>
@@ -149,39 +331,141 @@ function renderChart(daily) {
     return;
   }
 
+  // SVG area chart: smooth Catmull-Rom-ish curves through each daily point,
+  // a violet-fuchsia gradient fill underneath, dotted grid lines, and a
+  // hover layer that surfaces (date, sent) for each x position. Renders
+  // engagingly even with one data point (placed mid-canvas with the area
+  // extending out so the chart doesn't look empty when the operator picks
+  // "Hoje").
   const sorted = [...daily].reverse();
-  const max = Math.max(1, ...sorted.map(d => d.sent));
+  const W = 800, H = 220, PAD_L = 36, PAD_R = 12, PAD_T = 12, PAD_B = 28;
+  const innerW = W - PAD_L - PAD_R;
+  const innerH = H - PAD_T - PAD_B;
+  const max = Math.max(1, ...sorted.map((d) => d.sent));
+  const total = sorted.reduce((s, d) => s + d.sent, 0);
 
-  const bars = sorted.map(d => {
-    const h = (d.sent / max) * 100;
-    return `
-      <div class="flex-1 flex flex-col items-center justify-end group relative" style="min-width:0">
-        <div class="relative w-full max-w-[40px] flex flex-col items-center">
-          <div class="opacity-0 group-hover:opacity-100 transition text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 mb-1 whitespace-nowrap">${d.sent}</div>
-          <div class="w-full rounded-t-md bg-gradient-to-t from-fuchsia-500/50 to-violet-500 transition-all duration-300 hover:from-fuchsia-500/70 hover:to-violet-400"
-               style="height:${Math.max(h, 2)}%; min-height:2px"></div>
-        </div>
+  // X axis: spread the points evenly; single-point case is centered so the
+  // area shape doesn't degenerate into a hairline.
+  const xFor = (i) => sorted.length === 1
+    ? PAD_L + innerW / 2
+    : PAD_L + (i / (sorted.length - 1)) * innerW;
+  const yFor = (v) => PAD_T + innerH - (v / max) * innerH;
+
+  const pts = sorted.map((d, i) => ({ x: xFor(i), y: yFor(d.sent), v: d.sent, day: d.day }));
+
+  // Smooth path through points using mid-point bezier (clean & no overshoot).
+  let path;
+  if (pts.length === 1) {
+    const p = pts[0];
+    path = `M ${PAD_L} ${p.y} L ${p.x} ${p.y} L ${W - PAD_R} ${p.y}`;
+  } else {
+    path = pts.reduce((acc, p, i) => {
+      if (i === 0) return `M ${p.x} ${p.y}`;
+      const prev = pts[i - 1];
+      const cx = (prev.x + p.x) / 2;
+      return `${acc} C ${cx} ${prev.y}, ${cx} ${p.y}, ${p.x} ${p.y}`;
+    }, '');
+  }
+  const areaPath = `${path} L ${pts[pts.length - 1].x} ${PAD_T + innerH} L ${pts[0].x} ${PAD_T + innerH} Z`;
+
+  // Y-axis ticks (4 lines including 0 and max)
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => {
+    const y = PAD_T + innerH - f * innerH;
+    const v = Math.round(f * max);
+    return { y, v };
+  });
+  const gridLines = ticks.map((t) => `
+    <line x1="${PAD_L}" y1="${t.y}" x2="${W - PAD_R}" y2="${t.y}"
+          stroke="currentColor" stroke-opacity="0.08" stroke-width="1"
+          stroke-dasharray="${t.v === 0 ? '0' : '3 4'}"/>
+    <text x="${PAD_L - 6}" y="${t.y + 3}" text-anchor="end"
+          class="fill-zinc-400 dark:fill-zinc-500" font-size="10" font-family="ui-monospace, monospace">${t.v}</text>
+  `).join('');
+
+  const dots = pts.map((p, i) => `
+    <g class="group" data-day="${p.day}" data-sent="${p.v}">
+      <line x1="${p.x}" y1="${PAD_T}" x2="${p.x}" y2="${PAD_T + innerH}"
+            stroke="currentColor" stroke-opacity="0" stroke-width="1"
+            class="group-hover:stroke-opacity-20 transition"/>
+      <circle cx="${p.x}" cy="${p.y}" r="3"
+              class="fill-violet-500 stroke-white dark:stroke-zinc-900"
+              stroke-width="2"/>
+      <circle cx="${p.x}" cy="${p.y}" r="14"
+              fill="transparent"
+              class="cursor-pointer"
+              onmouseenter="__chartTip(${i})"
+              onmouseleave="__chartTipHide()"/>
+    </g>
+  `).join('');
+
+  const xLabels = pts.map((p) => {
+    const [, m, day] = p.day.split('-');
+    return `<text x="${p.x}" y="${H - 8}" text-anchor="middle"
+              class="fill-zinc-400 dark:fill-zinc-500" font-size="10"
+              font-family="ui-monospace, monospace">${day}/${m}</text>`;
+  }).join('');
+
+  target.innerHTML = `
+    <div class="relative h-full">
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="w-full h-full text-zinc-700 dark:text-zinc-300">
+        <defs>
+          <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="rgb(139 92 246)" stop-opacity="0.45"/>
+            <stop offset="100%" stop-color="rgb(217 70 239)" stop-opacity="0.02"/>
+          </linearGradient>
+          <linearGradient id="chartStroke" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="rgb(139 92 246)"/>
+            <stop offset="100%" stop-color="rgb(217 70 239)"/>
+          </linearGradient>
+        </defs>
+        ${gridLines}
+        <path d="${areaPath}" fill="url(#chartFill)"/>
+        <path d="${path}" fill="none" stroke="url(#chartStroke)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        ${dots}
+        ${xLabels}
+      </svg>
+      <div id="chartTooltip"
+           class="absolute pointer-events-none px-2.5 py-1.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-medium shadow-lg opacity-0 transition -translate-x-1/2 -translate-y-full whitespace-nowrap"
+           style="top:0;left:0">
+        <div id="chartTooltipDay" class="text-[10px] opacity-70 font-mono"></div>
+        <div id="chartTooltipVal" class="font-semibold"></div>
       </div>
-    `;
-  }).join('');
-
-  const labels = sorted.map(d => {
-    const [, m, day] = d.day.split('-');
-    return `<div class="flex-1 text-center text-[11px] text-zinc-400 dark:text-zinc-500 font-mono" style="min-width:0">${day}/${m}</div>`;
-  }).join('');
-
-  document.getElementById('dailyChart').innerHTML = `
-    <div class="flex flex-col h-full">
-      <div class="flex-1 flex items-end gap-1.5 px-1">${bars}</div>
-      <div class="flex gap-1.5 px-1 mt-2">${labels}</div>
     </div>
     <div class="flex items-center justify-between mt-3 text-xs pt-3 border-t border-zinc-100 dark:border-zinc-800">
       <div class="flex items-center gap-4">
-        <span class="text-zinc-400 dark:text-zinc-500">Total: <span class="font-semibold text-zinc-700 dark:text-zinc-300">${sorted.reduce((s, d) => s + d.sent, 0)} envios</span></span>
-        <span class="text-zinc-400 dark:text-zinc-500">Pico: <span class="font-semibold text-zinc-700 dark:text-zinc-300">${max}/dia</span></span>
+        <span class="text-zinc-400 dark:text-zinc-500">Total: <span class="font-semibold text-zinc-700 dark:text-zinc-300">${total.toLocaleString('pt-BR')} envios</span></span>
+        <span class="text-zinc-400 dark:text-zinc-500">Pico: <span class="font-semibold text-zinc-700 dark:text-zinc-300">${max.toLocaleString('pt-BR')}/dia</span></span>
+        <span class="text-zinc-400 dark:text-zinc-500">Média: <span class="font-semibold text-zinc-700 dark:text-zinc-300">${Math.round(total / sorted.length).toLocaleString('pt-BR')}/dia</span></span>
       </div>
     </div>
   `;
+
+  // Stash points on window for the tooltip handlers (svg children can't
+  // hold closures cleanly). Positions are in SVG coords; we convert to CSS
+  // pixels by reading the rendered svg's bounding rect on demand.
+  window.__chartPts = pts;
+  window.__chartW = W;
+  window.__chartH = H;
+  window.__chartTip = function (i) {
+    const p = window.__chartPts[i];
+    const svg = target.querySelector('svg');
+    const tip = document.getElementById('chartTooltip');
+    if (!svg || !tip || !p) return;
+    const rect = svg.getBoundingClientRect();
+    const parentRect = tip.parentElement.getBoundingClientRect();
+    const px = (p.x / window.__chartW) * rect.width + (rect.left - parentRect.left);
+    const py = (p.y / window.__chartH) * rect.height + (rect.top - parentRect.top);
+    tip.style.left = `${px}px`;
+    tip.style.top = `${py - 8}px`;
+    tip.style.opacity = '1';
+    const [y, m, day] = p.day.split('-');
+    document.getElementById('chartTooltipDay').textContent = `${day}/${m}/${y}`;
+    document.getElementById('chartTooltipVal').textContent = `${p.v.toLocaleString('pt-BR')} envios`;
+  };
+  window.__chartTipHide = function () {
+    const tip = document.getElementById('chartTooltip');
+    if (tip) tip.style.opacity = '0';
+  };
 }
 
 async function loadTopCopies() {
@@ -1080,6 +1364,7 @@ document.getElementById('sendNowBtn').addEventListener('click', sendNow);
 document.getElementById('refreshCtrBtn').addEventListener('click', refreshCtr);
 document.getElementById('reportPeriod').addEventListener('change', loadInicio);
 document.getElementById('topCopiesMin')?.addEventListener('change', loadTopCopies);
+document.getElementById('newSubsDays')?.addEventListener('change', loadNewSubs);
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   await api.post('/api/auth/logout');
   window.location.href = '/login.html';

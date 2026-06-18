@@ -187,7 +187,7 @@
             </div>
           </div>
 
-          <div id="summaryCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"></div>
+          <div id="summaryCards" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8"></div>
 
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm p-6 lg:col-span-2">
@@ -207,6 +207,41 @@
               </div>
               <div id="sitesList" class="space-y-3"></div>
             </div>
+          </div>
+
+          <!-- Daily new-subscribers table per site. Built after Julio
+               reported on 04/06 that the totals looked stuck for some sites;
+               this table makes it obvious that NEW signups are still landing
+               every day (the dashboard totals card shows ACTIVE subscribers,
+               which is a smaller number after zombie cleanup). -->
+          <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm p-6 mb-6">
+            <div class="flex items-center justify-between mb-5">
+              <div>
+                <h3 class="font-semibold text-zinc-900 dark:text-white">📬 Novos inscritos por dia por site</h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Confirma que o sistema está capturando leads (somente novos cadastros, não atividade)</p>
+              </div>
+              <select id="newSubsDays" class="px-3 py-1.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                <option value="7">7 dias</option>
+                <option value="14" selected>14 dias</option>
+                <option value="30">30 dias</option>
+              </select>
+            </div>
+            <div id="newSubsTable" class="overflow-x-auto -mx-2 px-2"></div>
+          </div>
+
+          <!-- Tempo médio de vida (retention) por site. Mostra, dos
+               inscritos que JÁ SAÍRAM (zombies), quantos dias em média
+               eles ficaram ativos antes do cleanup, e a idade média dos
+               que AINDA estão ativos. Permite comparar retenção entre
+               nichos. -->
+          <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm p-6 mb-6">
+            <div class="flex items-center justify-between mb-5">
+              <div>
+                <h3 class="font-semibold text-zinc-900 dark:text-white">⏱️ Tempo médio de vida por site</h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Quantos dias em média cada inscrito ficou na lista antes de virar zombie · e idade dos que ainda estão ativos</p>
+              </div>
+            </div>
+            <div id="lifetimeTable" class="overflow-x-auto -mx-2 px-2"></div>
           </div>
 
           <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm p-6">
